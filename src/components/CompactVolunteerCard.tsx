@@ -107,12 +107,6 @@ export default function CompactVolunteerCard({
                 <span>Level {user.level}</span>
                 {' ~ '}
                 <span>Connections {user.connections ?? 0}</span>
-                {user.volunteerId && (
-                  <>
-                    {' ~ '}
-                    <span>{user.volunteerId}</span>
-                  </>
-                )}
               </div>
             </div>
           </div>

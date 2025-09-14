@@ -269,12 +269,6 @@ export default function VolunteerCard() {
                 <span className="v">Level {me.level}</span>
                 {' ~ '}
                 <span className="v">Connections {me.connections ?? 0}</span>
-                {me.volunteerId && (
-                  <>
-                    {' ~ '}
-                    <span className="v">{me.volunteerId}</span>
-                  </>
-                )}
               </div>
             </div>
           </div>
