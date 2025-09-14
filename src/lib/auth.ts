@@ -9,6 +9,7 @@ const authDbName = process.env.MONGODB_AUTH_DB || 'volunteer_gamify_auth';
 export const authDb = client.db(authDbName);
 
 export const auth = betterAuth({
+  url: process.env.BETTER_AUTH_URL!,
   secret: process.env.BETTER_AUTH_SECRET!,
   database: mongodbAdapter(authDb),
   emailAndPassword: {

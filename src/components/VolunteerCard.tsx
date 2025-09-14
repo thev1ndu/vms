@@ -256,7 +256,7 @@ export default function VolunteerCard() {
                 className="text-xl font-semibold truncate j ml-2"
                 style={gradientStyle}
               >
-                {me.chatTag || 'Volunteer'}
+                {me.volunteerId || me.chatTag || 'Volunteer'}
               </div>
               <div className="text-xs truncate ml-2">
                 <span className="v">Level {me.level}</span>
