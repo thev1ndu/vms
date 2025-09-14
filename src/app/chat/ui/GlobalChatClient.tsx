@@ -49,6 +49,11 @@ export default function GlobalChatClient() {
   // fullscreen state
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // expanded messages state
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(
+    new Set()
+  );
+
   // initial load (latest) - no automatic polling
   const { data } = useSWR<{ messages: Msg[] }>(
     '/api/chat/global/messages?limit=1000',
@@ -224,6 +229,77 @@ export default function GlobalChatClient() {
     setIsFullscreen(!isFullscreen);
   };
 
+  // Message truncation constants
+  const MAX_MESSAGE_LENGTH = 200;
+  const MAX_LINES = 5;
+
+  const shouldTruncateMessage = (message: string) => {
+    return (
+      message.length > MAX_MESSAGE_LENGTH ||
+      message.split('\n').length > MAX_LINES
+    );
+  };
+
+  const toggleMessageExpansion = (messageId: string) => {
+    setExpandedMessages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  };
+
+  const renderMessageContent = (message: Msg) => {
+    const isExpanded = expandedMessages.has(message._id);
+    const shouldTruncate = shouldTruncateMessage(message.body);
+
+    let displayText = message.body;
+    if (shouldTruncate && !isExpanded) {
+      // Truncate to MAX_MESSAGE_LENGTH characters or MAX_LINES lines, whichever is shorter
+      const lines = message.body.split('\n');
+      if (lines.length > MAX_LINES) {
+        displayText = lines.slice(0, MAX_LINES).join('\n');
+      } else if (message.body.length > MAX_MESSAGE_LENGTH) {
+        displayText = message.body.substring(0, MAX_MESSAGE_LENGTH);
+      }
+    }
+
+    return (
+      <div className="whitespace-pre-wrap text-sm mt-0.5 break-words overflow-wrap-anywhere">
+        {displayText.split(/(https?:\/\/[^\s]+)/g).map((part, index) => {
+          if (part.match(/^https?:\/\/[^\s]+$/)) {
+            return (
+              <a
+                key={index}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline break-all"
+              >
+                {part}
+              </a>
+            );
+          }
+          return part;
+        })}
+        {shouldTruncate && !isExpanded && (
+          <span className="text-gray-400">...</span>
+        )}
+        {shouldTruncate && (
+          <button
+            onClick={() => toggleMessageExpansion(message._id)}
+            className="ml-2 text-blue-400 hover:text-blue-300 underline text-xs"
+          >
+            {isExpanded ? 'show less' : 'view more'}
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="h-[67vh] flex flex-col bg-black border-2 border-[#9FFF82] rounded-none">
       {/* Messages container */}
@@ -263,24 +339,7 @@ export default function GlobalChatClient() {
                   </button>{' '}
                   <span>• {new Date(m.createdAt).toLocaleString()}</span>
                 </div>
-                <div className="whitespace-pre-wrap text-sm mt-0.5 break-words overflow-wrap-anywhere">
-                  {m.body.split(/(https?:\/\/[^\s]+)/g).map((part, index) => {
-                    if (part.match(/^https?:\/\/[^\s]+$/)) {
-                      return (
-                        <a
-                          key={index}
-                          href={part}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 underline break-all"
-                        >
-                          {part}
-                        </a>
-                      );
-                    }
-                    return part;
-                  })}
-                </div>
+                {renderMessageContent(m)}
                 {!!m.attachments?.length && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {m.attachments!.map((a, i) => (
