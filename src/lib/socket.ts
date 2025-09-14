@@ -5,11 +5,14 @@ const messageListeners = new Set<MessageListener>();
 
 export function addMessageListener(listener: MessageListener) {
   messageListeners.add(listener);
-  return () => messageListeners.delete(listener);
+  return () => {
+    messageListeners.delete(listener);
+  };
 }
 
 export function emitMessage(message: any) {
   console.log('Broadcasting message to listeners:', message);
+  console.log('Number of listeners:', messageListeners.size);
   messageListeners.forEach((listener) => {
     try {
       listener(message);
