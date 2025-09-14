@@ -64,15 +64,6 @@ export default function Menu() {
           </Card>
         </Link>
 
-        <Link href="/profile">
-          <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#9FFF82]">
-            <CardContent className="flex h-full items-center justify-center gap-2 text-white p-2">
-              <User className="w-5 h-5" /> <br />
-              <span className="text-lg leading-tight">Profile</span>
-            </CardContent>
-          </Card>
-        </Link>
-
         {/* Admin-only menu items */}
         {isAdmin && (
           <>
@@ -100,12 +91,23 @@ export default function Menu() {
       {/* Bottom buttons */}
       <div className="mt-4 flex flex-col gap-3">
         <QRScanButton />
-        <Link href="/leaderboard">
-          <Button className="h-14 w-full text-lg rounded-none bg-[#9FFF82] text-black hover:bg-[#9FFF82] cursor-pointer flex items-center justify-center gap-2">
-            <ArrowUpRight className="w-5 h-5" /> <br />
-            <span>Leaderboard</span>
-          </Button>
-        </Link>
+
+        {/* Grid layout for leaderboard and profile */}
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/leaderboard">
+            <Button className="h-14 w-full text-lg rounded-none bg-[#9FFF82] text-black hover:bg-[#9FFF82] cursor-pointer flex items-center justify-center gap-2">
+              <ArrowUpRight className="w-5 h-5" />
+              <span>Leaderboard</span>
+            </Button>
+          </Link>
+
+          <Link href="/profile">
+            <Button className="h-14 w-full text-lg rounded-none bg-[#9FFF82] text-black hover:bg-[#9FFF82] cursor-pointer flex items-center justify-center gap-2">
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
