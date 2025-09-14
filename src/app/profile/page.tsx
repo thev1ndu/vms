@@ -140,13 +140,13 @@ export default function ProfilePage() {
               <Input
                 value={newChatTag}
                 onChange={(e) => setNewChatTag(e.target.value)}
-                placeholder="Enter new nickname (3-32 characters)"
+                placeholder="Enter new nickname (single word, 3-16 characters)"
                 className="bg-transparent border-2 border-[#9FFF82] rounded-none text-white"
                 disabled={!chatTagInfo?.canUpdate}
               />
               <p className="text-xs text-gray-400">
-                Must be 3-32 characters, start and end with alphanumeric
-                characters
+                Must be a single word, 3-16 characters, letters, numbers,
+                underscores, and hyphens only
               </p>
             </div>
 
@@ -200,19 +200,24 @@ export default function ProfilePage() {
           <CardContent className="space-y-2 text-gray-300">
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-[#9FFF82] rounded-full mt-2 flex-shrink-0" />
-              <p className="text-sm">Nicknames must be 3-32 characters long</p>
+              <p className="text-sm">Nicknames must be 3-16 characters long</p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-[#9FFF82] rounded-full mt-2 flex-shrink-0" />
               <p className="text-sm">
-                Must start and end with alphanumeric characters
+                Must be a single word (no spaces allowed)
               </p>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-[#9FFF82] rounded-full mt-2 flex-shrink-0" />
               <p className="text-sm">
-                Can contain letters, numbers, spaces, dots, underscores, and
-                hyphens
+                Can contain letters, numbers, underscores, and hyphens
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 bg-[#9FFF82] rounded-full mt-2 flex-shrink-0" />
+              <p className="text-sm">
+                Will be converted to lowercase automatically
               </p>
             </div>
             <div className="flex items-start gap-2">

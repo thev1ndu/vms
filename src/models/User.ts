@@ -1,7 +1,7 @@
 import { Schema, model, models } from 'mongoose';
 import { dbConnect } from '@/lib/db';
 
-const CHAT_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{1,30}[A-Za-z0-9]$/;
+const CHAT_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{1,14}[A-Za-z0-9]$/;
 
 export interface IUser {
   authUserId: string;
@@ -68,7 +68,7 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       sparse: true,
       minlength: 3,
-      maxlength: 32,
+      maxlength: 16,
       validate: {
         validator: (v: string) => !v || CHAT_TAG_RE.test(v),
         message: 'Invalid chat tag',
@@ -88,11 +88,18 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true, versionKey: false }
 );
 
-// Lowercased shadow for case-insensitive unique chatTag
+// Convert chat tag to lowercase and create shadow for case-insensitive unique chatTag
 UserSchema.pre('save', function (next) {
   if (this.isModified('chatTag')) {
-    // @ts-ignore
-    this.chatTagLower = this.chatTag ? this.chatTag.toLowerCase() : undefined;
+    if (this.chatTag) {
+      // @ts-ignore
+      this.chatTag = this.chatTag.toLowerCase();
+      // @ts-ignore
+      this.chatTagLower = this.chatTag;
+    } else {
+      // @ts-ignore
+      this.chatTagLower = undefined;
+    }
   }
   next();
 });

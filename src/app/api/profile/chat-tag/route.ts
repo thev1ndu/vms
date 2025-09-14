@@ -2,15 +2,18 @@ import { z } from 'zod';
 import { requireApproved } from '@/lib/guards';
 import User from '@/models/User';
 
-const CHAT_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{1,30}[A-Za-z0-9]$/;
+const CHAT_TAG_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{1,14}[A-Za-z0-9]$/;
 
 const UpdateChatTagSchema = z.object({
   chatTag: z
     .string()
     .min(3, 'Chat tag must be at least 3 characters')
-    .max(32, 'Chat tag must be at most 32 characters')
-    .regex(CHAT_TAG_RE, 'Invalid chat tag format')
-    .transform((tag) => tag.trim()),
+    .max(16, 'Chat tag must be at most 16 characters')
+    .regex(
+      CHAT_TAG_RE,
+      'Nickname must be a single word (3-16 characters, letters, numbers, underscores, and hyphens only, no spaces)'
+    )
+    .transform((tag) => tag.trim().toLowerCase()),
 });
 
 /**

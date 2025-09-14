@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { levelGradient } from '@/lib/gradients';
 import UserBadgeDialog from '@/components/UserBadgeDialog';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { Shield } from 'lucide-react';
+import { useSession } from '@/lib/auth-client';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
@@ -42,6 +44,9 @@ export default function GlobalChatClient() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
 
+  // session for admin check
+  const { data: session } = useSession();
+
   // composer
   const [sending, setSending] = useState(false);
   const [body, setBody] = useState('');
@@ -63,6 +68,9 @@ export default function GlobalChatClient() {
 
   // mention users state
   const [mentionUsers, setMentionUsers] = useState<MentionUser[]>([]);
+
+  // admin users state
+  const [adminUsers, setAdminUsers] = useState<Set<string>>(new Set());
 
   // initial load (latest) - no automatic polling
   const { data } = useSWR<{ messages: Msg[] }>(
@@ -89,6 +97,31 @@ export default function GlobalChatClient() {
       setMentionUsers(mentionsData.mentions);
     }
   }, [mentionsData]);
+
+  // Fetch admin users
+  useEffect(() => {
+    const fetchAdminUsers = async () => {
+      try {
+        const response = await fetch('/api/admin/users');
+        if (response.ok) {
+          const data = await response.json();
+          const adminSet = new Set<string>(
+            data.users
+              .filter(
+                (user: any) =>
+                  user.role === 'admin' && user.status === 'approved'
+              )
+              .map((user: any) => user.authUserId)
+          );
+          setAdminUsers(adminSet);
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin users:', error);
+      }
+    };
+
+    fetchAdminUsers();
+  }, []);
 
   // Real-time message handling
   const handleNewMessage = useCallback((message: Msg) => {
@@ -255,6 +288,11 @@ export default function GlobalChatClient() {
     setIsFullscreen(!isFullscreen);
   };
 
+  // Check if a user is admin
+  const isUserAdmin = (authUserId: string) => {
+    return adminUsers.has(authUserId);
+  };
+
   // Message truncation constants
   const MAX_MESSAGE_LENGTH = 200;
   const MAX_LINES = 5;
@@ -304,9 +342,9 @@ export default function GlobalChatClient() {
         );
       }
 
-      // Split by mentions (@chatTag)
+      // Split by mentions (@chatTag) - single words only, max 16 chars, case-insensitive
       const mentionParts = urlPart.split(
-        /(@[A-Za-z0-9][A-Za-z0-9 ._-]{1,30}[A-Za-z0-9])/g
+        /(@[A-Za-z0-9][A-Za-z0-9_-]{1,14}[A-Za-z0-9])/g
       );
 
       return mentionParts.map((mentionPart, mentionIndex) => {
@@ -398,22 +436,34 @@ export default function GlobalChatClient() {
                 key={m._id}
                 className="rounded border p-2 bg-transparent border-2 border-[#A5D8FF] rounded-none text-white text-sm max-w-full"
               >
-                <div className="text-sm text-gray-400">
-                  <button
-                    onClick={() =>
-                      handleUsernameClick(m.senderAuthUserId, m.senderDisplay)
-                    }
-                    className="font-medium hover:underline cursor-pointer transition-all"
-                    style={{
-                      background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})`,
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                    }}
-                  >
-                    {m.senderDisplay}
-                  </button>{' '}
-                  <span>• {new Date(m.createdAt).toLocaleString()}</span>
+                <div className="flex justify-between items-start mb-1">
+                  <div className="text-sm text-gray-400">
+                    <span className="inline-flex items-center gap-1">
+                      <button
+                        onClick={() =>
+                          handleUsernameClick(
+                            m.senderAuthUserId,
+                            m.senderDisplay
+                          )
+                        }
+                        className="font-medium hover:underline cursor-pointer transition-all"
+                        style={{
+                          background: `linear-gradient(135deg, ${gradient.from}, ${gradient.to})`,
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text',
+                        }}
+                      >
+                        {m.senderDisplay}
+                      </button>
+                      {isUserAdmin(m.senderAuthUserId) && (
+                        <Shield className="w-3 h-3 text-white flex-shrink-0" />
+                      )}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {new Date(m.createdAt).toLocaleString()}
+                  </div>
                 </div>
                 {renderMessageContent(m)}
                 {!!m.attachments?.length && (
