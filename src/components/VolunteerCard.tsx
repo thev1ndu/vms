@@ -1,11 +1,13 @@
 'use client';
 
 import useSWR from 'swr';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { progressForXP } from '@/lib/level';
 import { levelGradient } from '@/lib/gradients';
 import MyQRButton from './MyQRButton';
+import { Shield } from 'lucide-react';
+import { useSession } from '@/lib/auth-client';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
@@ -21,6 +23,12 @@ export default function VolunteerCard() {
     };
   }>('/api/me', fetcher, { refreshInterval: 5000 });
 
+  // session for admin check
+  const { data: session } = useSession();
+
+  // admin users state
+  const [adminUsers, setAdminUsers] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const h = () => mutate();
     window.addEventListener('me:refresh', h);
@@ -31,8 +39,38 @@ export default function VolunteerCard() {
     };
   }, [mutate]);
 
+  // Fetch admin users
+  useEffect(() => {
+    const fetchAdminUsers = async () => {
+      try {
+        const response = await fetch('/api/admin/users');
+        if (response.ok) {
+          const data = await response.json();
+          const adminSet = new Set<string>(
+            data.users
+              .filter(
+                (user: any) =>
+                  user.role === 'admin' && user.status === 'approved'
+              )
+              .map((user: any) => user.authUserId)
+          );
+          setAdminUsers(adminSet);
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin users:', error);
+      }
+    };
+
+    fetchAdminUsers();
+  }, []);
+
   const me = data?.me;
   const stats = useMemo(() => progressForXP(me?.xp ?? 0), [me?.xp]);
+
+  // Check if current user is admin
+  const isUserAdmin = (authUserId: string) => {
+    return adminUsers.has(authUserId);
+  };
 
   const prevBadges = useRef<string[]>([]);
   useEffect(() => {
@@ -259,11 +297,16 @@ export default function VolunteerCard() {
           {/* Left: name + gradient applied directly to chatTag */}
           <div className="flex items-center gap-2 min-w-0">
             <div className="min-w-0 leading-tight">
-              <div
-                className="text-xl font-semibold truncate j ml-2"
-                style={gradientStyle}
-              >
-                {me.chatTag || me.volunteerId || 'Volunteer'}
+              <div className="flex items-center gap-1 ml-2">
+                <div
+                  className="text-xl font-semibold truncate"
+                  style={gradientStyle}
+                >
+                  {me.chatTag || me.volunteerId || 'Volunteer'}
+                </div>
+                {session?.user?.id && isUserAdmin(session.user.id) && (
+                  <Shield className="w-4 h-4 text-white flex-shrink-0" />
+                )}
               </div>
               <div className="text-xs truncate ml-2">
                 <span className="v">Level {me.level}</span>

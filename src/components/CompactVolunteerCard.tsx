@@ -1,10 +1,11 @@
 'use client';
 
 import useSWR from 'swr';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { progressForXP } from '@/lib/level';
 import { levelGradient } from '@/lib/gradients';
+import { Shield } from 'lucide-react';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
@@ -29,6 +30,39 @@ export default function CompactVolunteerCard({
 
   const user = data?.me;
   const stats = useMemo(() => progressForXP(user?.xp ?? 0), [user?.xp]);
+
+  // admin users state
+  const [adminUsers, setAdminUsers] = useState<Set<string>>(new Set());
+
+  // Fetch admin users
+  useEffect(() => {
+    const fetchAdminUsers = async () => {
+      try {
+        const response = await fetch('/api/admin/users');
+        if (response.ok) {
+          const data = await response.json();
+          const adminSet = new Set<string>(
+            data.users
+              .filter(
+                (user: any) =>
+                  user.role === 'admin' && user.status === 'approved'
+              )
+              .map((user: any) => user.authUserId)
+          );
+          setAdminUsers(adminSet);
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin users:', error);
+      }
+    };
+
+    fetchAdminUsers();
+  }, []);
+
+  // Check if user is admin
+  const isUserAdmin = (authUserId: string) => {
+    return adminUsers.has(authUserId);
+  };
 
   if (isLoading) {
     return (
@@ -97,11 +131,16 @@ export default function CompactVolunteerCard({
           {/* Left: name + level info */}
           <div className="flex items-center gap-2 min-w-0">
             <div className="min-w-0 leading-tight">
-              <div
-                className="text-sm font-semibold truncate"
-                style={gradientStyle}
-              >
-                {displayName}
+              <div className="flex items-center gap-1">
+                <div
+                  className="text-sm font-semibold truncate"
+                  style={gradientStyle}
+                >
+                  {displayName}
+                </div>
+                {isUserAdmin(authUserId) && (
+                  <Shield className="w-3 h-3 text-white flex-shrink-0" />
+                )}
               </div>
               <div className="text-xs truncate">
                 <span>Level {user.level}</span>
