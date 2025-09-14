@@ -15,8 +15,8 @@ type Task = {
   category?: string;
   levelRequirement?: number;
   xpReward?: number;
-  startDate?: string;
-  endDate?: string;
+  startsAt?: string;
+  endsAt?: string;
 };
 
 type Participation = {
@@ -262,7 +262,7 @@ export default function MyTasksClient({
                     {t.xpReward ?? 0} XP
                   </span>
                 </CardTitle>
-                <div className="flex justify-center items-center text-xs text-muted-foreground">
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
                   <div className="flex-1 text-left">
                     Category: <span className="capitalize">{t.category}</span>
                   </div>
@@ -277,9 +277,9 @@ export default function MyTasksClient({
                 <div className="flex justify-center items-center text-xs text-muted-foreground">
                   <div className="flex-1 text-left">
                     Start:{' '}
-                    {t.startDate
-                      ? new Date(t.startDate).toLocaleDateString()
-                      : 'Invalid Date'}
+                    {t.startsAt
+                      ? new Date(t.startsAt).toLocaleString()
+                      : 'Not set'}
                   </div>
                   {/* <div className="flex-1 text-center">
                     Applied:{' '}
@@ -289,9 +289,7 @@ export default function MyTasksClient({
                   </div> */}
                   <div className="flex-1 text-right">
                     End:{' '}
-                    {t.endDate
-                      ? new Date(t.endDate).toLocaleDateString()
-                      : 'Invalid Date'}
+                    {t.endsAt ? new Date(t.endsAt).toLocaleString() : 'Not set'}
                   </div>
                 </div>
                 <div className="flex justify-center items-center text-xs text-muted-foreground">

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { levelGradient } from '@/lib/gradients';
 import UserBadgeDialog from '@/components/UserBadgeDialog';
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
@@ -45,16 +46,106 @@ export default function GlobalChatClient() {
     displayName: string;
   } | null>(null);
 
-  // initial load (latest)
+  // fullscreen state
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // initial load (latest) - no automatic polling
   const { data } = useSWR<{ messages: Msg[] }>(
     '/api/chat/global/messages?limit=1000',
-    fetcher
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    }
   );
+
+  // Real-time message handling
+  const handleNewMessage = useCallback((message: Msg) => {
+    console.log('New real-time message received:', message);
+    setMessages((prev) => {
+      // Check if message already exists to avoid duplicates
+      if (prev.some((m) => m._id === message._id)) {
+        console.log('Message already exists, skipping:', message._id);
+        return prev;
+      }
+      console.log('Adding new message to state:', message._id);
+      return dedupeById([...prev, message]);
+    });
+
+    // Auto-scroll if near bottom
+    const c = containerRef.current;
+    if (!c) return;
+    const nearBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 120;
+    if (nearBottom) {
+      setTimeout(() => (c.scrollTop = c.scrollHeight), 0);
+    }
+  }, []);
+
+  // Use real-time messaging hook
+  useRealtimeMessages(handleNewMessage);
 
   useEffect(() => {
     if (!data?.messages) return;
-    setMessages((prev) => dedupeById([...prev, ...data.messages]));
+
+    // Only update if there are new messages
+    setMessages((prev) => {
+      const newMessages = data.messages.filter(
+        (newMsg) => !prev.some((existingMsg) => existingMsg._id === newMsg._id)
+      );
+
+      if (newMessages.length === 0) return prev; // No new messages, don't update
+
+      return dedupeById([...prev, ...newMessages]);
+    });
   }, [data?.messages]);
+
+  // Simple polling fallback for real-time updates
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    const startPolling = () => {
+      interval = setInterval(() => {
+        // Only poll if tab is visible
+        if (!document.hidden) {
+          fetch('/api/chat/global/messages?limit=1000')
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.messages) {
+                setMessages((prev) => {
+                  const newMessages = data.messages.filter(
+                    (newMsg: Msg) =>
+                      !prev.some(
+                        (existingMsg) => existingMsg._id === newMsg._id
+                      )
+                  );
+                  if (newMessages.length === 0) return prev;
+                  return dedupeById([...prev, ...newMessages]);
+                });
+              }
+            })
+            .catch((err) => console.error('Polling error:', err));
+        }
+      }, 3000); // Poll every 3 seconds
+    };
+
+    startPolling();
+
+    // Stop polling when tab becomes hidden
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        startPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Load older when the top sentinel intersects
   const topRef = useRef<HTMLDivElement | null>(null);
@@ -98,31 +189,6 @@ export default function GlobalChatClient() {
     return () => obs.disconnect();
   }, [loadOlder]);
 
-  // Realtime via SSE
-  useEffect(() => {
-    const es = new EventSource('/api/chat/global/stream');
-    const onMsg = (ev: MessageEvent) => {
-      try {
-        const payload = JSON.parse(ev.data);
-        // We only care about "message" events; ignore heartbeats/ready
-        if (!payload || !payload._id) return;
-        setMessages((prev) => dedupeById([...prev, payload as Msg]));
-        // auto-scroll if near bottom
-        const c = containerRef.current;
-        if (!c) return;
-        const nearBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 120;
-        if (nearBottom) {
-          // next tick to ensure DOM updated
-          setTimeout(() => (c.scrollTop = c.scrollHeight), 0);
-        }
-      } catch {}
-    };
-    es.addEventListener('message', onMsg); // default event type
-    es.addEventListener('ready', () => {}); // optional
-    es.addEventListener('heartbeat', () => {}); // optional
-    return () => es.close();
-  }, []);
-
   // scroll to bottom when initial messages loaded
   useEffect(() => {
     const c = containerRef.current;
@@ -154,8 +220,12 @@ export default function GlobalChatClient() {
     setBadgeDialogOpen(true);
   };
 
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
   return (
-    <div className="h-[60vh] flex flex-col bg-transparent border-2 border-[#9FFF82] rounded-none">
+    <div className="h-[60vh] flex flex-col bg-black border-2 border-[#9FFF82] rounded-none">
       {/* Messages container */}
       <div
         ref={containerRef}
@@ -174,9 +244,9 @@ export default function GlobalChatClient() {
             return (
               <div
                 key={m._id}
-                className="rounded border p-2 bg-transparent border-2 border-[#A5D8FF] rounded-none text-white text-base"
+                className="rounded border p-2 bg-transparent border-2 border-[#A5D8FF] rounded-none text-white text-sm"
               >
-                <div className="text-base text-muted-foreground">
+                <div className="text-sm text-gray-400">
                   <button
                     onClick={() =>
                       handleUsernameClick(m.senderAuthUserId, m.senderDisplay)
@@ -193,8 +263,23 @@ export default function GlobalChatClient() {
                   </button>{' '}
                   <span>• {new Date(m.createdAt).toLocaleString()}</span>
                 </div>
-                <div className="whitespace-pre-wrap text-base mt-1">
-                  {m.body}
+                <div className="whitespace-pre-wrap text-sm mt-0.5">
+                  {m.body.split(/(https?:\/\/[^\s]+)/g).map((part, index) => {
+                    if (part.match(/^https?:\/\/[^\s]+$/)) {
+                      return (
+                        <a
+                          key={index}
+                          href={part}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          {part}
+                        </a>
+                      );
+                    }
+                    return part;
+                  })}
                 </div>
                 {!!m.attachments?.length && (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -219,7 +304,8 @@ export default function GlobalChatClient() {
       </div>
 
       {/* Input area - fixed at bottom */}
-      <div className="flex-shrink-0 p-3 border-t flex items-center gap-2">
+      <div className="flex-shrink-0 border-t border-[#9FFF82] flex items-center"></div>
+      <div className="flex-shrink-0 p-3 border-t border-[#9FFF82] flex items-center gap-2">
         <Input
           placeholder="Type a message…"
           value={body}

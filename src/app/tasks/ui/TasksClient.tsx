@@ -19,8 +19,8 @@ type Task = {
   volunteersRequired: number;
   volunteersAssigned: string[];
   xpReward: number;
-  startDate: string;
-  endDate: string;
+  startsAt?: string;
+  endsAt?: string;
 };
 
 type Me = { me: { level: number } };
@@ -174,12 +174,14 @@ export default function TasksClient() {
                       {t.xpReward} XP
                     </span>
                   </CardTitle>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <div>
+                  <div className="flex justify-between items-center text-xs text-muted-foreground">
+                    <div className="flex-1 text-left">
                       Category: <span className="capitalize">{t.category}</span>
                     </div>
-                    <div>Level: {t.levelRequirement}+</div>
-                    <div>
+                    <div className="flex-1 text-center">
+                      Level: {t.levelRequirement}+
+                    </div>
+                    <div className="flex-1 text-right">
                       Capacity: {t.volunteersAssigned?.length || 0}/
                       {t.volunteersRequired}
                     </div>
@@ -189,9 +191,17 @@ export default function TasksClient() {
                   <div className="text-sm">{t.description}</div>
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <div>
-                      Start: {new Date(t.startDate).toLocaleDateString()}
+                      Start:{' '}
+                      {t.startsAt
+                        ? new Date(t.startsAt).toLocaleString()
+                        : 'Not set'}
                     </div>
-                    <div>End: {new Date(t.endDate).toLocaleDateString()}</div>
+                    <div>
+                      End:{' '}
+                      {t.endsAt
+                        ? new Date(t.endsAt).toLocaleString()
+                        : 'Not set'}
+                    </div>
                   </div>
                   {t.mode === 'off-site' && (
                     <div className="pt-2 mt-2">

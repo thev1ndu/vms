@@ -308,12 +308,10 @@ export default function TaskTable() {
                 {(t.startsAt || t.endsAt) && (
                   <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:justify-between">
                     {t.startsAt && (
-                      <div>
-                        Start: {new Date(t.startsAt).toLocaleDateString()}
-                      </div>
+                      <div>Start: {new Date(t.startsAt).toLocaleString()}</div>
                     )}
                     {t.endsAt && (
-                      <div>End: {new Date(t.endsAt).toLocaleDateString()}</div>
+                      <div>End: {new Date(t.endsAt).toLocaleString()}</div>
                     )}
                   </div>
                 )}

@@ -5,6 +5,7 @@ import Message from '@/models/Message';
 import User from '@/models/User';
 import Conversation from '@/models/Conversation';
 import { publish } from '@/lib/sse';
+import { emitMessage } from '@/lib/socket';
 
 /**
  * GET /api/chat/global/messages?limit=50&before=ISO
@@ -152,6 +153,9 @@ export async function POST(req: Request) {
 
   // 🔊 broadcast to all SSE subscribers
   publish('message', payload);
+
+  // 🔊 broadcast to all message listeners
+  emitMessage(payload);
 
   return Response.json({ ok: true, message: payload });
 }
