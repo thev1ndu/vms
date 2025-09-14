@@ -191,6 +191,13 @@ export default function VolunteerCard() {
         <MyQRButton />
       </div>
 
+      {/* Volunteer ID top-left */}
+      {me.volunteerId && (
+        <div className="absolute top-2 left-2 z-20">
+          <div className="text-base text-white px-2 py-1">{me.volunteerId}</div>
+        </div>
+      )}
+
       {/* Honeycomb badge background */}
       <div
         className="absolute inset-0 pointer-events-none opacity-50"
@@ -256,12 +263,18 @@ export default function VolunteerCard() {
                 className="text-xl font-semibold truncate j ml-2"
                 style={gradientStyle}
               >
-                {me.volunteerId || me.chatTag || 'Volunteer'}
+                {me.chatTag || me.volunteerId || 'Volunteer'}
               </div>
               <div className="text-xs truncate ml-2">
                 <span className="v">Level {me.level}</span>
                 {' ~ '}
                 <span className="v">Connections {me.connections ?? 0}</span>
+                {me.volunteerId && (
+                  <>
+                    {' ~ '}
+                    <span className="v">{me.volunteerId}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>

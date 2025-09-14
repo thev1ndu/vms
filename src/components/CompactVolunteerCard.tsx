@@ -82,6 +82,15 @@ export default function CompactVolunteerCard({
         borderImageSlice: 1,
       }}
     >
+      {/* Volunteer ID top-left */}
+      {user.volunteerId && (
+        <div className="absolute top-1 left-1 z-20">
+          <div className="text-base text-white px-2 py-1">
+            {user.volunteerId}
+          </div>
+        </div>
+      )}
+
       {/* Foreground content */}
       <div className="relative z-10 h-full p-2 flex flex-col gap-1">
         <div className="flex items-center justify-between">
@@ -98,6 +107,12 @@ export default function CompactVolunteerCard({
                 <span>Level {user.level}</span>
                 {' ~ '}
                 <span>Connections {user.connections ?? 0}</span>
+                {user.volunteerId && (
+                  <>
+                    {' ~ '}
+                    <span>{user.volunteerId}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>

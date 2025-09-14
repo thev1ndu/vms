@@ -22,6 +22,13 @@ type Msg = {
   createdAt: string;
 };
 
+type MentionUser = {
+  authUserId: string;
+  chatTag: string;
+  volunteerId: string;
+  level: number;
+};
+
 function dedupeById(list: Msg[]) {
   const seen = new Set<string>();
   return list.filter((m) =>
@@ -54,6 +61,9 @@ export default function GlobalChatClient() {
     new Set()
   );
 
+  // mention users state
+  const [mentionUsers, setMentionUsers] = useState<MentionUser[]>([]);
+
   // initial load (latest) - no automatic polling
   const { data } = useSWR<{ messages: Msg[] }>(
     '/api/chat/global/messages?limit=1000',
@@ -63,6 +73,22 @@ export default function GlobalChatClient() {
       revalidateOnReconnect: true,
     }
   );
+
+  // fetch mention users
+  const { data: mentionsData } = useSWR<{ mentions: MentionUser[] }>(
+    '/api/chat/mentions',
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  useEffect(() => {
+    if (mentionsData?.mentions) {
+      setMentionUsers(mentionsData.mentions);
+    }
+  }, [mentionsData]);
 
   // Real-time message handling
   const handleNewMessage = useCallback((message: Msg) => {
@@ -252,6 +278,71 @@ export default function GlobalChatClient() {
     });
   };
 
+  // Parse mentions in text
+  const parseMentions = (text: string) => {
+    // Create a map of chatTags to users for quick lookup
+    const chatTagMap = new Map<string, MentionUser>();
+    mentionUsers.forEach((user) => {
+      chatTagMap.set(user.chatTag.toLowerCase(), user);
+    });
+
+    // Split text by URLs first, then by mentions
+    const urlParts = text.split(/(https?:\/\/[^\s]+)/g);
+
+    return urlParts.map((urlPart, urlIndex) => {
+      if (urlPart.match(/^https?:\/\/[^\s]+$/)) {
+        return (
+          <a
+            key={`url-${urlIndex}`}
+            href={urlPart}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 underline break-all"
+          >
+            {urlPart}
+          </a>
+        );
+      }
+
+      // Split by mentions (@chatTag)
+      const mentionParts = urlPart.split(
+        /(@[A-Za-z0-9][A-Za-z0-9 ._-]{1,30}[A-Za-z0-9])/g
+      );
+
+      return mentionParts.map((mentionPart, mentionIndex) => {
+        if (mentionPart.startsWith('@')) {
+          const chatTag = mentionPart.substring(1);
+          const user = chatTagMap.get(chatTag.toLowerCase());
+
+          if (user) {
+            return (
+              <button
+                key={`mention-${urlIndex}-${mentionIndex}`}
+                onClick={() =>
+                  handleUsernameClick(user.authUserId, user.chatTag)
+                }
+                className="text-yellow-400 hover:text-yellow-300 font-medium cursor-pointer"
+              >
+                {mentionPart}
+              </button>
+            );
+          } else {
+            // Mention not found, show as regular text
+            return (
+              <span
+                key={`mention-${urlIndex}-${mentionIndex}`}
+                className="text-gray-400"
+              >
+                {mentionPart}
+              </span>
+            );
+          }
+        }
+        return mentionPart;
+      });
+    });
+  };
+
   const renderMessageContent = (message: Msg) => {
     const isExpanded = expandedMessages.has(message._id);
     const shouldTruncate = shouldTruncateMessage(message.body);
@@ -269,22 +360,7 @@ export default function GlobalChatClient() {
 
     return (
       <div className="whitespace-pre-wrap text-sm mt-0.5 break-words overflow-wrap-anywhere">
-        {displayText.split(/(https?:\/\/[^\s]+)/g).map((part, index) => {
-          if (part.match(/^https?:\/\/[^\s]+$/)) {
-            return (
-              <a
-                key={index}
-                href={part}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 underline break-all"
-              >
-                {part}
-              </a>
-            );
-          }
-          return part;
-        })}
+        {parseMentions(displayText)}
         {shouldTruncate && !isExpanded && (
           <span className="text-gray-400">...</span>
         )}

@@ -64,6 +64,15 @@ export default function Menu() {
           </Card>
         </Link>
 
+        <Link href="/profile">
+          <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#9FFF82]">
+            <CardContent className="flex h-full items-center justify-center gap-2 text-white p-2">
+              <User className="w-5 h-5" /> <br />
+              <span className="text-lg leading-tight">Profile</span>
+            </CardContent>
+          </Card>
+        </Link>
+
         {/* Admin-only menu items */}
         {isAdmin && (
           <>
