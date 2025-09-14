@@ -229,7 +229,7 @@ export default function GlobalChatClient() {
       {/* Messages container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-3 space-y-3"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-3"
         style={{ scrollbarWidth: 'thin' }}
       >
         {/* Top sentinel for infinite older */}
@@ -244,7 +244,7 @@ export default function GlobalChatClient() {
             return (
               <div
                 key={m._id}
-                className="rounded border p-2 bg-transparent border-2 border-[#A5D8FF] rounded-none text-white text-sm"
+                className="rounded border p-2 bg-transparent border-2 border-[#A5D8FF] rounded-none text-white text-sm max-w-full"
               >
                 <div className="text-sm text-gray-400">
                   <button
@@ -263,7 +263,7 @@ export default function GlobalChatClient() {
                   </button>{' '}
                   <span>• {new Date(m.createdAt).toLocaleString()}</span>
                 </div>
-                <div className="whitespace-pre-wrap text-sm mt-0.5">
+                <div className="whitespace-pre-wrap text-sm mt-0.5 break-words overflow-wrap-anywhere">
                   {m.body.split(/(https?:\/\/[^\s]+)/g).map((part, index) => {
                     if (part.match(/^https?:\/\/[^\s]+$/)) {
                       return (
@@ -272,7 +272,7 @@ export default function GlobalChatClient() {
                           href={part}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 underline"
+                          className="text-blue-400 hover:text-blue-300 underline break-all"
                         >
                           {part}
                         </a>
