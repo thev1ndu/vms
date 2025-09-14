@@ -225,7 +225,7 @@ export default function GlobalChatClient() {
   };
 
   return (
-    <div className="h-[60vh] flex flex-col bg-black border-2 border-[#9FFF82] rounded-none">
+    <div className="h-[67vh] flex flex-col bg-black border-2 border-[#9FFF82] rounded-none">
       {/* Messages container */}
       <div
         ref={containerRef}
