@@ -22,6 +22,7 @@ type ChatTagInfo = {
 export default function ProfileClient() {
   const [newChatTag, setNewChatTag] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showRules, setShowRules] = useState(false);
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -181,42 +182,58 @@ export default function ProfileClient() {
         </CardContent>
       </Card>
 
-      {/* Info Section */}
+      {/* Info Section - compact with See more */}
       <Card className="bg-transparent border-2 border-[#A5D8FF] rounded-none text-white">
         <CardHeader>
           <CardTitle>Nickname Rules</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-muted-foreground">
+          {/* Always show only the first rule */}
           <div className="flex items-start gap-2">
             <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
             <p className="text-sm">Nicknames must be 3-16 characters long</p>
           </div>
-          <div className="flex items-start gap-2">
-            <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
-            <p className="text-sm">Must be a single word (no spaces allowed)</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
-            <p className="text-sm">
-              Can contain letters, numbers, underscores, and hyphens
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
-            <p className="text-sm">
-              Will be converted to lowercase automatically
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
-            <p className="text-sm">
-              Regular users can update once per 24 hours
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
-            <p className="text-sm">Admins can update anytime</p>
-          </div>
+          {/* Controls and expanded content */}
+          {!showRules && (
+            <button
+              onClick={() => setShowRules(true)}
+              className="text-xs text-[#A5D8FF] hover:underline w-fit"
+            >
+              See more
+            </button>
+          )}
+          {showRules && (
+            <>
+              <div className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
+                  <p className="text-sm">Must be a single word (no spaces allowed)</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
+                  <p className="text-sm">Can contain letters, numbers, underscores, and hyphens</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
+                  <p className="text-sm">Will be converted to lowercase automatically</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
+                  <p className="text-sm">Regular users can update once per 24 hours</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
+                  <p className="text-sm">Admins can update anytime</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRules(false)}
+                className="text-xs text-[#A5D8FF] hover:underline w-fit mt-1"
+              >
+                Hide
+              </button>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
