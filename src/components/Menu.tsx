@@ -25,13 +25,13 @@ export default function Menu() {
     (session.user as any).status === 'approved';
 
   return (
-    <div className="mx-auto w-full h-[60vh]">
+    <div className="mx-auto w-full">
       {/* Tiles: always 2 columns */}
       <div className="grid grid-cols-2 gap-4">
         <Link href="/me">
           <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#9FFF82]">
             <CardContent className="flex h-full items-center justify-center gap-2 text-white p-2">
-              <ArrowUpRight className="w-5 h-5" /> <br />
+              {/* <ArrowUpRight className="w-5 h-5" /> <br /> */}
               <span className="text-lg leading-tight">Objectives</span>
             </CardContent>
           </Card>
@@ -40,8 +40,8 @@ export default function Menu() {
         <Link href="/tasks">
           <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#9FFF82]">
             <CardContent className="flex h-full items-center justify-center gap-2 text-white p-2">
-              <ArrowUpRight className="w-5 h-5" /> <br />
-              <span className="text-lg leading-tight">Mission Control</span>
+              {/* <ArrowUpRight className="w-5 h-5" /> <br /> */}
+              <span className="text-lg leading-tight">Missions</span>
             </CardContent>
           </Card>
         </Link>
@@ -49,8 +49,8 @@ export default function Menu() {
         <Link href="/chat">
           <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#9FFF82]">
             <CardContent className="flex h-full items-center justify-center gap-2 text-white p-2">
-              <ArrowUpRight className="w-5 h-5" /> <br />
-              <span className="text-lg leading-tight">Global Chat</span>
+              {/* <ArrowUpRight className="w-5 h-5" /> <br /> */}
+              <span className="text-lg leading-tight">Chat</span>
             </CardContent>
           </Card>
         </Link>
@@ -58,8 +58,8 @@ export default function Menu() {
         <Link href="/grid">
           <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#9FFF82]">
             <CardContent className="flex h-full items-center justify-center gap-2 text-white p-2">
-              <ArrowUpRight className="w-5 h-5" /> <br />
-              <span className="text-lg leading-tight">Grid View</span>
+              {/* <ArrowUpRight className="w-5 h-5" /> <br /> */}
+              <span className="text-lg leading-tight">Grid</span>
             </CardContent>
           </Card>
         </Link>
@@ -68,18 +68,18 @@ export default function Menu() {
         {isAdmin && (
           <>
             <Link href="/admin/tasks/create">
-              <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#FFD700]">
+              <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#A5D8FF]">
                 <CardContent className="flex h-full items-center justify-center gap-2 text-white p-2">
-                  <Plus className="w-5 h-5" /> <br />
+                  {/* <Plus className="w-5 h-5" /> <br /> */}
                   <span className="text-lg leading-tight">Create Task</span>
                 </CardContent>
               </Card>
             </Link>
 
             <Link href="/admin/tasks">
-              <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#FFD700]">
+              <Card className="w-full h-24 shadow-sm rounded-none bg-transparent border-2 border-[#A5D8FF]">
                 <CardContent className="flex h-full items-center justify-center gap-2 text-white p-2">
-                  <Settings className="w-5 h-5" /> <br />
+                  {/* <Settings className="w-5 h-5" /> <br /> */}
                   <span className="text-lg leading-tight">Manage Tasks</span>
                 </CardContent>
               </Card>
@@ -98,14 +98,14 @@ export default function Menu() {
         >
           <Link href="/leaderboard">
             <Button className="h-14 w-full text-lg rounded-none bg-[#9FFF82] text-black hover:bg-[#9FFF82] cursor-pointer flex items-center justify-center gap-2">
-              <ArrowUpRight className="w-5 h-5" />
+              {/* <ArrowUpRight className="w-5 h-5" /> */}
               <span>Leaderboard</span>
             </Button>
           </Link>
 
           <Link href="/profile">
             <Button className="h-14 w-full text-lg rounded-none bg-[#9FFF82] text-black hover:bg-[#9FFF82] cursor-pointer flex items-center justify-center gap-2">
-              <User className="w-5 h-5" />
+              {/* <User className="w-5 h-5" /> */}
               <span>Profile</span>
             </Button>
           </Link>
@@ -114,8 +114,8 @@ export default function Menu() {
           {isAdmin && (
             <Link href="/admin/users">
               <Button className="h-14 w-full text-lg rounded-none bg-[#A5D8FF] text-black hover:bg-[#A5D8FF] cursor-pointer flex items-center justify-center gap-2">
-                <Settings className="w-5 h-5" />
-                <span>User Management</span>
+                {/* <Settings className="w-5 h-5" /> */}
+                <span>System Users</span>
               </Button>
             </Link>
           )}

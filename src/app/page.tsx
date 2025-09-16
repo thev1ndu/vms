@@ -14,6 +14,8 @@ export default function Home() {
       const status = (session.user as any).status || 'pending';
       if (status === 'approved') {
         router.push('/dashboard');
+      } else if (status === 'suspended') {
+        router.push('/suspended');
       } else {
         router.push('/pending');
       }
