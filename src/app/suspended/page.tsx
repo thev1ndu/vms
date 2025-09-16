@@ -4,33 +4,17 @@ import { useSession, signOut } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
 import { Clock, User } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect } from 'react';
 
-export default function PendingPage() {
+export default function SuspendedPage() {
   const router = useRouter();
   const { data: session } = useSession();
 
-  useEffect(() => {
-    if (!session?.user) {
-      router.push('/');
-      return;
-    }
-
-    const status = (session.user as any).status || 'pending';
-    if (status === 'suspended') {
-      router.push('/suspended');
-      return;
-    }
-  }, [session, router]);
-
   if (!session?.user) {
+    router.push('/');
     return null;
   }
 
-  const status = (session.user as any).status || 'pending';
-  if (status === 'suspended') {
-    return null;
-  }
+  const status = (session.user as any).status || 'suspended';
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black overflow-hidden">
@@ -45,23 +29,23 @@ export default function PendingPage() {
               className="rounded-none"
             />
           </div>
-          <h1 className="text-4xl j font-bold text-[#A5D8FF]">
-            AWAITING APPROVAL
+          <h1 className="text-4xl j font-bold text-red-500">
+            ACCOUNT SUSPENDED
           </h1>
           <p className="text-white text-lg">
             {session.user.name}, <br />
-            you’ll be onboarded once approved.
+            your account has been suspended.
           </p>
           <div className="bg-gray-50 p-1 rounded-none border-2">
             <p className="font-medium text-gray-800">{session.user.email}</p>
           </div>
-          <p className="text-white text-lg">Sign out and try again later.</p>
+          <p className="text-white text-lg">Sign out and contact support.</p>
         </div>
 
         <Button
           variant="secondary"
           onClick={() => signOut()}
-          className="rounded-none text-base font-bold w-20 bg-[#A5D8FF] hover:bg-[#A5D8FF]/95 self-center"
+          className="rounded-none text-base font-bold w-20 bg-red-500 hover:bg-red-500/95 self-center"
         >
           Sign Out
         </Button>
