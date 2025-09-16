@@ -287,7 +287,7 @@ export default function AdminUsersClient() {
     users: AdminUser[];
     pagination: PaginationData;
   }>(
-    `/api/admin/users?page=${page}&limit=20&search=${encodeURIComponent(
+    `/api/admin/users?page=${page}&limit=10&search=${encodeURIComponent(
       search
     )}&status=${statusFilter}`,
     fetcher
@@ -477,6 +477,7 @@ export default function AdminUsersClient() {
                       size="sm"
                       onClick={() => setPage(page - 1)}
                       disabled={!pagination.hasPrev}
+                      className="rounded-none hover:bg-transparent hover:text-current"
                     >
                       <ChevronLeft className="w-4 h-4" />
                       Previous
@@ -496,14 +497,14 @@ export default function AdminUsersClient() {
                           return (
                             <Button
                               key={pageNum}
-                              variant={
-                                pageNum === pagination.page
-                                  ? 'default'
-                                  : 'outline'
-                              }
+                              variant="outline"
                               size="sm"
                               onClick={() => setPage(pageNum)}
-                              className="w-8 h-8 p-0"
+                              className={`w-8 h-8 p-0 rounded-none ${
+                                pageNum === pagination.page
+                                  ? 'bg-[#A5D8FF] hover:bg-[#A5D8FF]text-black border-[#A5D8FF]'
+                                  : ''
+                              }`}
                             >
                               {pageNum}
                             </Button>
@@ -516,6 +517,7 @@ export default function AdminUsersClient() {
                       size="sm"
                       onClick={() => setPage(page + 1)}
                       disabled={!pagination.hasNext}
+                      className="rounded-none hover:bg-transparent hover:text-current"
                     >
                       Next
                       <ChevronRight className="w-4 h-4" />

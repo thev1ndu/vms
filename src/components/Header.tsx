@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { LogOut, ArrowLeft } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { signOut } from '@/lib/auth-client';
@@ -15,15 +16,17 @@ export default function Header() {
   };
 
   return (
-    <div className="relative flex items-center justify-center h-[20vh]">
+    <div className="relative mt-1 flex items-center justify-center h-[20vh]">
       {/* Centered Logo */}
-      <Image
-        src="/yogeshwari.png"
-        alt="Yogeshwari Logo"
-        width={200}
-        height={200}
-        className="object-contain"
-      />
+      <Link href="/dashboard">
+        <Image
+          src="/yogeshwari.png"
+          alt="Yogeshwari Logo"
+          width={200}
+          height={200}
+          className="object-contain w-46 h-46 sm:w-46 sm:h-46 md:w-48 md:h-48 lg:w-52 lg:h-52 xl:w-56 xl:h-56"
+        />
+      </Link>
 
       {/* Show back arrow only if NOT on /dashboard */}
       {pathname !== '/dashboard' && (

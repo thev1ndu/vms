@@ -63,18 +63,8 @@ export default function SystemUsersDash() {
     return (
       <div className="space-y-3">
         <div className="space-y-1">
-          <h3 className="text-base font-semibold text-white mb-1">
-            User Statistics
-          </h3>
-          <div className="space-y-0">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="animate-pulse">
-                  <div className="h-3 bg-gray-600 rounded w-20"></div>
-                </div>
-                <div className="animate-pulse h-5 bg-gray-600 rounded w-8"></div>
-              </div>
-            ))}
+          <div className="text-center py-8 text-gray-400">
+            Loading statistics...
           </div>
         </div>
       </div>
@@ -158,24 +148,24 @@ export default function SystemUsersDash() {
       </div>
 
       {/* System Health Summary */}
-      <div className="space-y-1">
+      <div className="">
         <h3 className="text-base font-semibold text-white mb-1">
           System Health Summary
         </h3>
         <div className="space-y-0.5">
-          <div className="flex justify-between py-0.5">
+          <div className="flex justify-between">
             <span className="text-sm text-gray-300">Active Users</span>
             <span className="text-lg font-bold text-white">
               {stats.approvedUsers}
             </span>
           </div>
-          <div className="flex justify-between py-0.5">
+          <div className="flex justify-between">
             <span className="text-sm text-gray-300">Pending Approval</span>
             <span className="text-lg font-bold text-white">
               {stats.pendingUsers}
             </span>
           </div>
-          <div className="flex justify-between py-0.5">
+          <div className="flex justify-between">
             <span className="text-sm text-gray-300">Suspended</span>
             <span className="text-lg font-bold text-white">
               {stats.suspendedUsers}
