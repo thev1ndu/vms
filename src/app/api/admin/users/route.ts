@@ -10,7 +10,6 @@ type AnyUserDoc = {
   status?: string;
   role?: string;
   createdAt?: Date | string | number;
-  // some adapters store arrays
   emails?: { email: string }[];
   profile?: { name?: string };
 };
@@ -48,27 +47,29 @@ export async function GET(req: Request) {
     return Response.json({ error: gate.error }, { status: gate.status });
 
   const url = new URL(req.url);
-  const statusFilter = url.searchParams.get('status'); // optional: pending|approved|rejected
+  const page = parseInt(url.searchParams.get('page') || '1');
+  const limit = parseInt(url.searchParams.get('limit') || '20');
+  const search = url.searchParams.get('search') || '';
+  const statusFilter = url.searchParams.get('status') || '';
 
   const authUsersColl = await getAuthUsersCollection();
 
-  // Build query without assuming exact field presence
+  // Build query with search functionality
   const query: Record<string, any> = {};
-  if (statusFilter) query.status = statusFilter;
 
-  const raw = await authUsersColl
+  if (statusFilter && statusFilter !== 'all') {
+    query.status = statusFilter;
+  }
+
+  // Get all users first for search filtering
+  const allRaw = await authUsersColl
     .find(query)
-    // don't over-project; some fields vary by adapter version
-    .sort({ createdAt: -1 }) // harmless if field missing
-    .limit(500)
+    .sort({ createdAt: -1 })
     .toArray();
 
-  const normalized = raw
-    .map(normalizeAuthUser)
-    // sanity: require an id (skip truly malformed docs)
-    .filter((u) => !!u.id);
+  const normalized = allRaw.map(normalizeAuthUser).filter((u) => !!u.id);
 
-  // Join with app DB users to pull volunteerId/xp/level/chatTag
+  // Join with app DB users to pull volunteerId/xp/level/displayName
   const ids = normalized.map((u) => u.id);
   const appUsers = await (await User)
     .find(
@@ -79,7 +80,7 @@ export async function GET(req: Request) {
 
   const byId = new Map(appUsers.map((u: any) => [u.authUserId, u]));
 
-  const users = normalized.map((au) => {
+  let users = normalized.map((au) => {
     const appUser = byId.get(au.id) as any;
     return {
       authUserId: au.id,
@@ -95,5 +96,36 @@ export async function GET(req: Request) {
     };
   });
 
-  return Response.json({ users });
+  // Apply search filter
+  if (search) {
+    const searchLower = search.toLowerCase();
+    users = users.filter(
+      (user) =>
+        user.email.toLowerCase().includes(searchLower) ||
+        user.name.toLowerCase().includes(searchLower) ||
+        (user.displayName &&
+          user.displayName.toLowerCase().includes(searchLower)) ||
+        (user.volunteerId &&
+          user.volunteerId.toLowerCase().includes(searchLower))
+    );
+  }
+
+  // Apply pagination
+  const total = users.length;
+  const totalPages = Math.ceil(total / limit);
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedUsers = users.slice(startIndex, endIndex);
+
+  return Response.json({
+    users: paginatedUsers,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    },
+  });
 }

@@ -92,8 +92,10 @@ export default function Menu() {
       <div className="mt-4 flex flex-col gap-3">
         <QRScanButton />
 
-        {/* Grid layout for leaderboard and profile */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Grid layout for leaderboard, profile, and admin users */}
+        <div
+          className={`grid gap-3 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}
+        >
           <Link href="/leaderboard">
             <Button className="h-14 w-full text-lg rounded-none bg-[#9FFF82] text-black hover:bg-[#9FFF82] cursor-pointer flex items-center justify-center gap-2">
               <ArrowUpRight className="w-5 h-5" />
@@ -107,6 +109,16 @@ export default function Menu() {
               <span>Profile</span>
             </Button>
           </Link>
+
+          {/* Admin Users Management - Only for admins */}
+          {isAdmin && (
+            <Link href="/admin/users">
+              <Button className="h-14 w-full text-lg rounded-none bg-[#A5D8FF] text-black hover:bg-[#A5D8FF] cursor-pointer flex items-center justify-center gap-2">
+                <Settings className="w-5 h-5" />
+                <span>User Management</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { ObjectId } from 'mongodb';
 
 const Body = z.object({
   authUserId: z.string(),
-  status: z.enum(['approved', 'blocked']),
+  status: z.enum(['approved', 'suspended']),
   email: z.string().email().optional(), // <-- allow email fallback
 });
 
