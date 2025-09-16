@@ -5,7 +5,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { progressForXP } from '@/lib/level';
 import { levelGradient } from '@/lib/gradients';
-import { Shield } from 'lucide-react';
+import AdminBadge from './AdminBadge';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
@@ -38,17 +38,10 @@ export default function CompactVolunteerCard({
   useEffect(() => {
     const fetchAdminUsers = async () => {
       try {
-        const response = await fetch('/api/admin/users');
+        const response = await fetch('/api/admin-ids');
         if (response.ok) {
           const data = await response.json();
-          const adminSet = new Set<string>(
-            data.users
-              .filter(
-                (user: any) =>
-                  user.role === 'admin' && user.status === 'approved'
-              )
-              .map((user: any) => user.authUserId)
-          );
+          const adminSet = new Set<string>(data.adminIds);
           setAdminUsers(adminSet);
         }
       } catch (error) {
@@ -138,9 +131,7 @@ export default function CompactVolunteerCard({
                 >
                   {displayName}
                 </div>
-                {isUserAdmin(authUserId) && (
-                  <Shield className="w-3 h-3 text-white flex-shrink-0" />
-                )}
+                {isUserAdmin(authUserId) && <AdminBadge />}
               </div>
               <div className="text-xs truncate">
                 <span>Level {user.level}</span>

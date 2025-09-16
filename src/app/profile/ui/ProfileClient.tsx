@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Shield } from 'lucide-react';
+import { Clock, User } from 'lucide-react';
+import AdminBadge from '@/components/AdminBadge';
 import useSWR from 'swr';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
@@ -40,8 +41,36 @@ export default function ProfileClient() {
   }, [displayNameInfo]);
 
   const handleUpdateDisplayName = async () => {
-    if (!newDisplayName.trim()) {
+    const trimmedName = newDisplayName.trim();
+
+    if (!trimmedName) {
       setMessage({ type: 'error', text: 'Please enter a display name' });
+      return;
+    }
+
+    // Check if display name contains any spaces
+    if (trimmedName.includes(' ')) {
+      setMessage({
+        type: 'error',
+        text: 'Display name cannot contain spaces',
+      });
+      return;
+    }
+
+    // Check character length (2-16 characters)
+    if (trimmedName.length < 2) {
+      setMessage({
+        type: 'error',
+        text: 'Display name must be at least 2 characters long',
+      });
+      return;
+    }
+
+    if (trimmedName.length > 16) {
+      setMessage({
+        type: 'error',
+        text: 'Display name must be 16 characters or less',
+      });
       return;
     }
 
@@ -52,7 +81,7 @@ export default function ProfileClient() {
       const response = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ displayName: newDisplayName.trim() }),
+        body: JSON.stringify({ displayName: trimmedName }),
       });
 
       const result = await response.json();
@@ -112,15 +141,7 @@ export default function ProfileClient() {
               <Badge variant="outline" className="text-white border-[#A5D8FF]">
                 {displayNameInfo?.displayName || 'Not set'}
               </Badge>
-              {displayNameInfo?.isAdmin && (
-                <Badge
-                  variant="outline"
-                  className="text-yellow-400 border-yellow-400"
-                >
-                  <Shield className="w-3 h-3 mr-1" />
-                  Admin
-                </Badge>
-              )}
+              {displayNameInfo?.isAdmin && <AdminBadge />}
             </div>
           </div>
 
@@ -173,7 +194,10 @@ export default function ProfileClient() {
             disabled={
               !displayNameInfo?.canUpdate ||
               isUpdating ||
-              !newDisplayName.trim()
+              !newDisplayName.trim() ||
+              newDisplayName.trim().includes(' ') ||
+              newDisplayName.trim().length < 2 ||
+              newDisplayName.trim().length > 16
             }
             className="w-full bg-[#A5D8FF] hover:bg-[#A5D8FF] text-black rounded-none cursor-pointer text-lg"
           >
@@ -190,11 +214,11 @@ export default function ProfileClient() {
         <CardContent className="space-y-2 text-muted-foreground">
           <div className="flex items-start gap-2">
             <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
-            <p className="text-sm">Display names can be any length</p>
+            <p className="text-sm">Must be 2-16 characters long</p>
           </div>
           <div className="flex items-start gap-2">
             <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />
-            <p className="text-sm">Can contain spaces and special characters</p>
+            <p className="text-sm">Cannot contain spaces</p>
           </div>
           <div className="flex items-start gap-2">
             <div className="w-2 h-2 bg-[#A5D8FF] rounded-full mt-2 flex-shrink-0" />

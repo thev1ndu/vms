@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { progressForXP } from '@/lib/level';
 import { levelGradient } from '@/lib/gradients';
 import MyQRButton from './MyQRButton';
-import { Shield } from 'lucide-react';
+import AdminBadge from './AdminBadge';
 import { useSession } from '@/lib/auth-client';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
@@ -43,17 +43,10 @@ export default function VolunteerCard() {
   useEffect(() => {
     const fetchAdminUsers = async () => {
       try {
-        const response = await fetch('/api/admin/users');
+        const response = await fetch('/api/admin-ids');
         if (response.ok) {
           const data = await response.json();
-          const adminSet = new Set<string>(
-            data.users
-              .filter(
-                (user: any) =>
-                  user.role === 'admin' && user.status === 'approved'
-              )
-              .map((user: any) => user.authUserId)
-          );
+          const adminSet = new Set<string>(data.adminIds);
           setAdminUsers(adminSet);
         }
       } catch (error) {
@@ -287,7 +280,7 @@ export default function VolunteerCard() {
                   {me.displayName || me.volunteerId || 'Volunteer'}
                 </div>
                 {session?.user?.id && isUserAdmin(session.user.id) && (
-                  <Shield className="w-4 h-4 text-white flex-shrink-0" />
+                  <AdminBadge />
                 )}
               </div>
               <div className="text-xs truncate ml-2">

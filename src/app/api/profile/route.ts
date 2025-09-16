@@ -6,7 +6,21 @@ import { grantBadgeBySlug } from '@/lib/badges';
 export const runtime = 'nodejs';
 
 const Body = z.object({
-  displayName: z.string().min(1).optional(),
+  displayName: z
+    .string()
+    .min(2, 'Display name must be at least 2 characters long')
+    .max(16, 'Display name must be 16 characters or less')
+    .transform((val) => val.trim())
+    .refine((val) => val.length >= 2, {
+      message: 'Display name must be at least 2 characters long',
+    })
+    .refine((val) => val.length <= 16, {
+      message: 'Display name must be 16 characters or less',
+    })
+    .refine((val) => !val.includes(' '), {
+      message: 'Display name cannot contain spaces',
+    })
+    .optional(),
   email: z.string().email().optional(),
   alias: z.string().min(1).optional(),
   avatarUrl: z.string().url().optional(),

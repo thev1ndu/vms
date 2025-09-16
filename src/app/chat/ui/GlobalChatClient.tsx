@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { levelGradient } from '@/lib/gradients';
 import UserBadgeDialog from '@/components/UserBadgeDialog';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
-import { Shield } from 'lucide-react';
+import AdminBadge from '@/components/AdminBadge';
 import { useSession } from '@/lib/auth-client';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
@@ -117,17 +117,10 @@ export default function GlobalChatClient() {
   useEffect(() => {
     const fetchAdminUsers = async () => {
       try {
-        const response = await fetch('/api/admin/users');
+        const response = await fetch('/api/admin-ids');
         if (response.ok) {
           const data = await response.json();
-          const adminSet = new Set<string>(
-            data.users
-              .filter(
-                (user: any) =>
-                  user.role === 'admin' && user.status === 'approved'
-              )
-              .map((user: any) => user.authUserId)
-          );
+          const adminSet = new Set<string>(data.adminIds);
           setAdminUsers(adminSet);
         }
       } catch (error) {
@@ -441,7 +434,7 @@ export default function GlobalChatClient() {
                         {m.senderDisplay}
                       </button>
                       {isUserAdmin(m.senderAuthUserId) && (
-                        <Shield className="w-3 h-3 text-white flex-shrink-0" />
+                        <AdminBadge className="ml-1" />
                       )}
                     </span>
                   </div>
