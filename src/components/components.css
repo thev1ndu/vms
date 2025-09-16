@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Jersey+25&family=VT323&display=swap');
+
+/* Apply VT323 globally */
+body {
+  font-family: "VT323", monospace !important;
+}
+
+/* Optional helper class for VT323 */
+.v {
+  font-family: "VT323", monospace;
+}
+
+/* Optional helper class for Jersey 25 */
+.j {
+  font-family: "Jersey 25", sans-serif;
+}
