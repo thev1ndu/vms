@@ -1,4 +1,4 @@
-# Docker Setup for Agent VMS
+# Docker Setup for Agent
 
 This project includes Docker configuration for easy deployment and development.
 
