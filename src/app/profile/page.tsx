@@ -14,12 +14,16 @@ export default async function ProfilePage() {
   return (
     <>
       <Header />
-      <h2 className="text-4xl j font-bold text-center text-[#A5D8FF] mb-8">
-        PROFILE
-      </h2>
-      <VolunteerCard />
-      <div className="mt-4">
-        <ProfileClient />
+      <div className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl space-y-8">
+          <h2 className="text-4xl font-bold text-center text-[#A5D8FF] mb-8">
+            PROFILE
+          </h2>
+          <VolunteerCard />
+          <div className="mt-6">
+            <ProfileClient />
+          </div>
+        </div>
       </div>
     </>
   );
