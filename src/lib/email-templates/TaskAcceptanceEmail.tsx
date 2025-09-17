@@ -61,17 +61,19 @@ export const TaskAcceptanceEmail = ({
         <Body className="mx-auto my-auto bg-white px-2 font-sans">
           <Preview>{previewText}</Preview>
           <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
-            <Section className="mt-[32px]">
+            {/* <Section className="mt-[32px]">
               <Img
-                src="https://i.postimg.cc/RVgNFgRS/yogeshwari.png"
+                src="/yogeshwari.png"
                 alt="Yogeshwari Logo"
                 className="mx-auto h-28 my-0 rounded-full"
               />
-            </Section>
-            <Heading className="mx-0 my-[30px] p-0 text-center font-normal text-[24px] text-black">
+            </Section> */}
+            <Heading className="mx-0 my-[30px] p-0 text-center font-normal text-[16px] text-black">
               Congratulations!
               <br />
-              You've been accepted for <strong>{taskTitle}</strong>
+              You've been accepted for
+              <br />
+              <strong>{taskTitle}</strong>
             </Heading>
             <Text className="text-[14px] text-black leading-[24px]">
               Hello {userName},
