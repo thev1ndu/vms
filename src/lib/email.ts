@@ -1,4 +1,8 @@
 import { Resend } from 'resend';
+import { render } from '@react-email/render';
+import ApprovalEmail from './email-templates/ApprovalEmail';
+import TaskApplicationEmail from './email-templates/TaskApplicationEmail';
+import TaskAcceptanceEmail from './email-templates/TaskAcceptanceEmail';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -32,6 +36,8 @@ export interface TaskAcceptanceNotificationEmailData {
   taskXpReward: number;
   assignedCount: number;
   requiredCount: number;
+  creatorName?: string;
+  creatorEmail?: string;
 }
 
 export async function sendApprovalEmail({
@@ -40,44 +46,18 @@ export async function sendApprovalEmail({
   volunteerId,
 }: ApprovalEmailData) {
   try {
+    const emailHtml = await render(
+      ApprovalEmail({
+        name,
+        volunteerId,
+      })
+    );
+
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'VMS <noreply@yourdomain.com>',
       to: [email],
-      subject: 'Welcome to VMS - Your Account Has Been Approved! 🎉',
-      html: `
-        <h2>Welcome to VMS!</h2>
-        <p>Hello ${name || 'there'},</p>
-        
-        <p>Great news! Your account has been approved and you're now officially part of the VMS (Volunteer Management System) community.</p>
-        
-        ${
-          volunteerId
-            ? `
-        <p><strong>Your Volunteer ID:</strong> ${volunteerId}</p>
-        <p>Keep this ID handy - you'll need it for various activities and check-ins.</p>
-        `
-            : ''
-        }
-        
-        <p>You can now access all the features of the platform:</p>
-        <ul>
-          <li>Browse and apply for volunteer tasks</li>
-          <li>Track your volunteer hours and achievements</li>
-          <li>Connect with other volunteers</li>
-          <li>Earn XP and level up your volunteer profile</li>
-          <li>Participate in community discussions</li>
-        </ul>
-        
-        <p><a href="${
-          process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-        }/dashboard">Get Started</a></p>
-        
-        <p>If you have any questions or need assistance, don't hesitate to reach out to our support team.</p>
-        
-        <p>Welcome aboard and thank you for joining our volunteer community!</p>
-        
-        <p>Best regards,<br>The VMS Team</p>
-      `,
+      subject: 'Welcome to Patrons at Yogeshwari',
+      html: emailHtml,
     });
 
     if (error) {
@@ -106,32 +86,24 @@ export async function sendTaskApplicationEmail({
   taskXpReward,
 }: TaskApplicationEmailData) {
   try {
+    const emailHtml = await render(
+      TaskApplicationEmail({
+        creatorName,
+        applicantName,
+        applicantVolunteerId,
+        taskTitle,
+        taskDescription,
+        taskMode,
+        taskCategory,
+        taskXpReward,
+      })
+    );
+
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'VMS <noreply@yourdomain.com>',
       to: [creatorEmail],
-      subject: `New Application for Task: ${taskTitle}`,
-      text: `
-Hello ${creatorName || 'Task Creator'},
-
-A volunteer has applied for your task "${taskTitle}".
-
-APPLICANT INFORMATION:
-- Name: ${applicantName || 'Not provided'}
-- Email: ${applicantEmail}
-- Volunteer ID: ${applicantVolunteerId || 'Not assigned'}
-
-TASK INFORMATION:
-- Title: ${taskTitle}
-- Description: ${taskDescription}
-- Mode: ${taskMode}
-- Category: ${taskCategory}
-- XP Reward: ${taskXpReward}
-
-You can manage this application and view all applicants in the admin panel.
-
-Best regards,
-The VMS Team
-      `,
+      subject: `New Applicant for ${taskTitle}`,
+      html: emailHtml,
     });
 
     if (error) {
@@ -158,39 +130,31 @@ export async function sendTaskAcceptanceNotificationEmail({
   taskXpReward,
   assignedCount,
   requiredCount,
+  creatorName,
+  creatorEmail,
 }: TaskAcceptanceNotificationEmailData) {
   try {
+    const emailHtml = await render(
+      TaskAcceptanceEmail({
+        userName,
+        userVolunteerId,
+        taskTitle,
+        taskDescription,
+        taskMode,
+        taskCategory,
+        taskXpReward,
+        assignedCount,
+        requiredCount,
+        creatorName,
+        creatorEmail,
+      })
+    );
+
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'VMS <noreply@yourdomain.com>',
       to: [userEmail],
-      subject: `Congratulations! You've been accepted for: ${taskTitle}`,
-      text: `
-Hello ${userName || 'Volunteer'},
-
-Great news! You have been accepted for the volunteer task "${taskTitle}".
-
-TASK INFORMATION:
-- Title: ${taskTitle}
-- Description: ${taskDescription}
-- Mode: ${taskMode}
-- Category: ${taskCategory}
-- XP Reward: ${taskXpReward}
-
-CURRENT STATUS:
-- Assigned Volunteers: ${assignedCount}/${requiredCount}
-- Status: ${assignedCount >= requiredCount ? 'FULL' : 'OPEN'}
-
-WHAT'S NEXT:
-- You can now start working on this task
-- Make sure to complete it within the specified timeframe
-- You will earn ${taskXpReward} XP upon completion
-- Contact the task creator if you have any questions
-
-Thank you for your commitment to volunteering!
-
-Best regards,
-The VMS Team
-      `,
+      subject: `Congratulations! You've been accepted for ${taskTitle}`,
+      html: emailHtml,
     });
 
     if (error) {

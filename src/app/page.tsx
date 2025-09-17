@@ -40,14 +40,16 @@ export default function Home() {
               className="h-28 w-28 object-contain"
             />
             <h1 className="text-2xl font-semibold tracking-tight text-[#A5D8FF] whitespace-nowrap">
-              Welcome to Yogeshwari
+              Welcome to Patrons at Yogeshwari
             </h1>
             <div className="relative mt-4 w-full">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-white/30"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-background px-4 text-white/60">Sign in</span>
+                <span className="bg-background px-4 text-white/60">
+                  Sign in
+                </span>
               </div>
             </div>
           </div>
@@ -89,11 +91,12 @@ export default function Home() {
                 </svg>
                 {isSigningIn ? 'Signing in…' : 'Continue with Google'}
               </Button>
-
             </div>
           ) : (
             <div className="flex items-center justify-center gap-3 text-foreground">
-              <span className="text-sm opacity-80 text-white">Redirecting…</span>
+              <span className="text-sm opacity-80 text-white">
+                Redirecting…
+              </span>
             </div>
           )}
         </div>
