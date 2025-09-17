@@ -3,12 +3,21 @@ import { requireApproved } from '@/lib/guards';
 import Task from '@/models/Task';
 import Participation from '@/models/Participation';
 import User from '@/models/User';
+import { sendTaskApplicationEmail } from '@/lib/email';
+import { authDb } from '@/lib/auth';
+import { ObjectId } from 'mongodb';
 
 type TaskDoc = {
   _id: any;
   mode?: string;
   status?: string;
   levelRequirement?: number;
+  title?: string;
+  description?: string;
+  category?: string;
+  xpReward?: number;
+  createdBy?: string;
+  createdByEmail?: string;
 };
 
 type UserProfile = {
@@ -33,7 +42,19 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Invalid body' }, { status: 400 });
 
   const authUserId = String(gate.session!.user.id);
-  const task = await Task.findById(parsed.data.taskId).lean<TaskDoc>().exec();
+  const task = await Task.findById(parsed.data.taskId, {
+    mode: 1,
+    status: 1,
+    levelRequirement: 1,
+    title: 1,
+    description: 1,
+    category: 1,
+    xpReward: 1,
+    createdBy: 1,
+    createdByEmail: 1,
+  })
+    .lean<TaskDoc>()
+    .exec();
   if (!task) return Response.json({ error: 'Task not found' }, { status: 404 });
   if (task.mode !== 'off-site')
     return Response.json(
@@ -62,7 +83,7 @@ export async function POST(req: Request) {
   }
 
   // Idempotent create "applied"
-  await Participation.updateOne(
+  const participationResult = await Participation.updateOne(
     { taskId: String(task._id), authUserId },
     {
       $setOnInsert: {
@@ -76,6 +97,57 @@ export async function POST(req: Request) {
     },
     { upsert: true }
   );
+
+  // Send email notification to task creator if this is a new application
+  if (participationResult.upsertedCount > 0 && task.createdByEmail) {
+    try {
+      // Get applicant information from auth database
+      const authUsersColl = authDb.collection('user');
+      const applicantAuth = await authUsersColl.findOne({
+        _id: new ObjectId(authUserId),
+      });
+
+      // Get applicant app profile
+      const applicantProfile = await User.findOne(
+        { authUserId },
+        { volunteerId: 1, displayName: 1, name: 1 }
+      ).lean();
+
+      // Get creator information from auth database
+      const creatorAuth = await authUsersColl.findOne({
+        _id: new ObjectId(task.createdBy),
+      });
+
+      if (applicantAuth && creatorAuth) {
+        const emailResult = await sendTaskApplicationEmail({
+          creatorEmail: task.createdByEmail,
+          creatorName: creatorAuth.name,
+          applicantEmail: applicantAuth.email,
+          applicantName:
+            applicantProfile?.displayName ||
+            applicantProfile?.name ||
+            applicantAuth.name,
+          applicantVolunteerId: applicantProfile?.volunteerId,
+          taskTitle: task.title || 'Untitled Task',
+          taskDescription: task.description || 'No description',
+          taskMode: task.mode || 'off-site',
+          taskCategory: task.category || 'Uncategorized',
+          taskXpReward: task.xpReward || 0,
+        });
+
+        if (!emailResult.success) {
+          console.error(
+            'Failed to send task application email:',
+            emailResult.error
+          );
+          // Don't fail the application process if email fails
+        }
+      }
+    } catch (emailError) {
+      console.error('Error sending task application email:', emailError);
+      // Don't fail the application process if email fails
+    }
+  }
 
   return Response.json({ ok: true });
 }

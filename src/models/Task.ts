@@ -17,6 +17,8 @@ export interface ITask {
   status: TaskStatus; // "draft"|"open"|"closed"
   startsAt?: Date;
   endsAt?: Date;
+  createdBy: string; // authUserId of the creator
+  createdByEmail: string; // email of the creator
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,6 +53,8 @@ const TaskSchema = new Schema<ITask>(
     },
     startsAt: { type: Date, index: true },
     endsAt: { type: Date, index: true },
+    createdBy: { type: String, required: true, index: true }, // authUserId
+    createdByEmail: { type: String, required: true, index: true }, // email
   },
   { timestamps: true, versionKey: false }
 );

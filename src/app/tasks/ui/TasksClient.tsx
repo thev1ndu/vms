@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import StableDialog from '@/components/StableDialog';
+import { Badge } from '@/components/ui/badge';
+import { Star } from 'lucide-react';
 import '@/components/components.css';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
@@ -21,6 +22,7 @@ type Task = {
   xpReward: number;
   startsAt?: string;
   endsAt?: string;
+  isRecommended?: boolean;
 };
 
 type Me = { me: { level: number } };
@@ -38,11 +40,7 @@ function ApplyButton({
   taskId: string;
   onSuccess?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [appliedSuccessfully, setAppliedSuccessfully] = useState(false);
 
   async function handleApply() {
     setIsLoading(true);
@@ -54,54 +52,28 @@ function ApplyButton({
       });
       const j = await res.json();
       if (!res.ok) {
-        setTitle('ERROR');
-        setMessage(j.error || 'Apply failed');
-        setAppliedSuccessfully(false);
+        console.error('Apply failed:', j.error || 'Apply failed');
+        // You could add a toast notification here if needed
       } else {
-        setTitle('SUCCESS');
-        setMessage('Applied!');
-        setAppliedSuccessfully(true);
-        // Don't refresh data immediately - wait for dialog to close
+        // Success - refresh data to hide the task
+        onSuccess?.();
       }
     } catch (error) {
-      setTitle('ERROR');
-      setMessage('Apply failed');
-      setAppliedSuccessfully(false);
+      console.error('Apply failed:', error);
+      // You could add a toast notification here if needed
     } finally {
       setIsLoading(false);
     }
   }
 
-  function handleOpenChange(newOpen: boolean) {
-    setOpen(newOpen);
-    // If dialog is being closed and application was successful, refresh data to hide the task
-    if (!newOpen && appliedSuccessfully) {
-      onSuccess?.();
-    }
-  }
-
   return (
-    <StableDialog
-      open={open}
-      onOpenChange={handleOpenChange}
-      trigger={
-        <Button
-          onClick={handleApply}
-          disabled={isLoading}
-          className="w-full bg-[#A5D8FF] text-black hover:bg-[#A5D8FF] rounded-none cursor-pointer text-lg"
-        >
-          {isLoading ? 'Apply' : 'Apply'}
-        </Button>
-      }
-      title={title || 'APPLY TO TASK'}
-      contentClassName="sm:max-w-md border-2 border-[#A5D8FF] bg-[#000000] rounded-none"
-      headerClassName="p-0"
-      titleClassName="mx-auto w-[90%] j bg-[#C49799] text-xl text-black text-center py-3 mb-4"
+    <Button
+      onClick={handleApply}
+      disabled={isLoading}
+      className="w-full bg-[#A5D8FF] text-black hover:bg-[#A5D8FF] rounded-none cursor-pointer text-lg"
     >
-      <div className="flex items-center justify-center p-4">
-        <p className="text-sm text-white">{message}</p>
-      </div>
-    </StableDialog>
+      {isLoading ? 'Applying...' : 'Apply'}
+    </Button>
   );
 }
 
@@ -121,8 +93,13 @@ export default function TasksClient() {
     fetcher
   );
 
+  const { data: recommendedData } = useSWR<{
+    recommendedTasks: Task[];
+  }>('/api/me/recommended-tasks', fetcher);
+
   const tasks = useMemo(() => {
     const allTasks = data?.tasks ?? [];
+    const recommendedTasks = recommendedData?.recommendedTasks ?? [];
 
     // Collect all task IDs that user has participated in (applied, accepted, or completed)
     const participatedTaskIds = new Set([
@@ -131,9 +108,43 @@ export default function TasksClient() {
       ...(userTasks?.completed ?? []).map((p) => p.taskId),
     ]);
 
+    // Create a set of recommended task IDs for quick lookup
+    const recommendedTaskIds = new Set(
+      recommendedTasks.map((task) => task._id)
+    );
+
     // Filter out tasks that user has already participated in
-    return allTasks.filter((task) => !participatedTaskIds.has(task._id));
-  }, [data, userTasks]);
+    const filteredTasks = allTasks.filter(
+      (task) => !participatedTaskIds.has(task._id)
+    );
+
+    // Filter recommended tasks to only include those matching current tab and not participated in
+    const filteredRecommendedTasks = recommendedTasks.filter(
+      (task) => task.mode === tab && !participatedTaskIds.has(task._id)
+    );
+
+    // Create a set of recommended task IDs for deduplication
+    const recommendedTaskIdSet = new Set(
+      filteredRecommendedTasks.map((task) => task._id)
+    );
+
+    // Filter out regular tasks that are already in recommended tasks to avoid duplicates
+    const filteredTasksWithoutRecommended = filteredTasks.filter(
+      (task) => !recommendedTaskIdSet.has(task._id)
+    );
+
+    // Combine recommended tasks at the top with regular tasks (no duplicates)
+    const combinedTasks = [
+      ...filteredRecommendedTasks,
+      ...filteredTasksWithoutRecommended,
+    ];
+
+    // Add isRecommended flag to each task
+    return combinedTasks.map((task) => ({
+      ...task,
+      isRecommended: recommendedTaskIds.has(task._id),
+    }));
+  }, [data, recommendedData, userTasks, tab]);
 
   return (
     <Tabs
@@ -165,11 +176,25 @@ export default function TasksClient() {
             tasks.map((t) => (
               <Card
                 key={t._id}
-                className="bg-transparent border-2 border-[#A5D8FF] rounded-none text-white"
+                className={`bg-transparent border-2 rounded-none text-white ${
+                  t.mode === 'on-site'
+                    ? 'border-yellow-400'
+                    : 'border-[#A5D8FF]'
+                }`}
               >
                 <CardHeader>
+                  {t.isRecommended && (
+                    <Badge
+                      variant="outline"
+                      className="text-white border-[#000000] rounded-none bg-black"
+                    >
+                      RECOMMENDED
+                    </Badge>
+                  )}
                   <CardTitle className="flex items-center justify-between">
-                    <span className="truncate">{t.title}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{t.title}</span>
+                    </div>
                     <span className="text-lg text-muted-white opacity-90">
                       {t.xpReward} XP
                     </span>

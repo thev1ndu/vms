@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/guards';
 import { z } from 'zod';
 import { nextSequence, formatVolunteerId } from '@/models/seq';
 import { ObjectId } from 'mongodb';
+import { sendApprovalEmail } from '@/lib/email';
 
 const Body = z.object({
   authUserId: z.string(),
@@ -11,7 +12,13 @@ const Body = z.object({
   email: z.string().email().optional(), // <-- allow email fallback
 });
 
-type AnyUserDoc = { _id?: any; id?: string; userId?: string; email?: string };
+type AnyUserDoc = {
+  _id?: any;
+  id?: string;
+  userId?: string;
+  email?: string;
+  name?: string;
+};
 
 async function getAuthUsersCollection() {
   const cols = await authDb.listCollections().toArray();
@@ -79,6 +86,29 @@ export async function POST(req: Request) {
       doc.volunteerNo = n;
       doc.volunteerId = formatVolunteerId(n);
       await doc.save();
+    }
+
+    // 3) Send approval email
+    try {
+      // Get user details for email
+      const authUser = await usersColl.findOne(match);
+      const userDoc = await (await User).findOne({ authUserId });
+
+      if (authUser && userDoc) {
+        const emailResult = await sendApprovalEmail({
+          email: authUser.email || email || '',
+          name: authUser.name,
+          volunteerId: userDoc.volunteerId,
+        });
+
+        if (!emailResult.success) {
+          console.error('Failed to send approval email:', emailResult.error);
+          // Don't fail the approval process if email fails
+        }
+      }
+    } catch (emailError) {
+      console.error('Error sending approval email:', emailError);
+      // Don't fail the approval process if email fails
     }
   }
 

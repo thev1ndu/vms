@@ -41,6 +41,9 @@ type Task = {
   startsAt?: string;
   endsAt?: string;
   qrImageDataUrl?: string;
+  createdBy: string;
+  createdByEmail: string;
+  createdAt: string;
 };
 
 const CATEGORIES = [
@@ -266,7 +269,9 @@ export default function TaskTable() {
           tasks.map((t) => (
             <Card
               key={t._id}
-              className="bg-transparent border-2 border-[#A5D8FF] rounded-none text-white"
+              className={`bg-transparent border-2 rounded-none text-white ${
+                t.mode === 'on-site' ? 'border-yellow-400' : 'border-[#A5D8FF]'
+              }`}
             >
               <CardHeader className="pb-3">
                 <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -286,6 +291,10 @@ export default function TaskTable() {
                     </div>
                     <div>
                       Category: <span className="capitalize">{t.category}</span>
+                    </div>
+                    <div>
+                      Created by:{' '}
+                      <span className="text-[#A5D8FF]">{t.createdByEmail}</span>
                     </div>
                   </div>
                   <div className="flex flex-col gap-1 sm:flex-row sm:gap-4">

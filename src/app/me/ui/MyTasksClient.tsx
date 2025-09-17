@@ -35,27 +35,15 @@ type MyTasksData = {
   completed: Participation[];
 };
 
-type ProofSubmission = {
-  _id: string;
-  taskId: {
-    _id: string;
-    title: string;
-    xpReward?: number;
-    badgeId?: string;
-  };
-  proof: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  rejectionReason?: string;
-};
-
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
 function MarkCompletedButton({
   taskId,
+  participation,
   onSuccess,
 }: {
   taskId: string;
+  participation?: Participation;
   onSuccess?: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -63,6 +51,11 @@ function MarkCompletedButton({
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [completedSuccessfully, setCompletedSuccessfully] = useState(false);
+
+  // Check if proof has been submitted (either from database or local state)
+  const hasProofSubmitted =
+    completedSuccessfully ||
+    Boolean(participation?.proof && participation.proof.trim() !== '');
   const [proof, setProof] = useState('');
 
   async function handleMarkCompleted() {
@@ -116,11 +109,19 @@ function MarkCompletedButton({
       onOpenChange={handleOpenChange}
       trigger={
         <Button
-          onClick={() => setOpen(true)}
-          disabled={isLoading}
-          className="w-full bg-[#A5D8FF] text-black hover:bg-[#A5D8FF] rounded-none cursor-pointer text-lg"
+          onClick={() => !hasProofSubmitted && setOpen(true)}
+          disabled={isLoading || hasProofSubmitted}
+          className={`w-full rounded-none cursor-pointer text-lg ${
+            hasProofSubmitted
+              ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+              : 'bg-[#A5D8FF] text-black hover:bg-[#A5D8FF]'
+          }`}
         >
-          {isLoading ? 'Submitting...' : 'Mark Completed'}
+          {isLoading
+            ? 'Submitting...'
+            : hasProofSubmitted
+            ? 'Marked Completed'
+            : 'Mark Completed'}
         </Button>
       }
       title="MARK TASK AS COMPLETED"
@@ -173,11 +174,7 @@ function WithdrawButton({
   taskId: string;
   onSuccess?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [withdrawnSuccessfully, setWithdrawnSuccessfully] = useState(false);
 
   async function handleWithdraw() {
     setIsLoading(true);
@@ -189,54 +186,28 @@ function WithdrawButton({
       });
       const j = await res.json();
       if (!res.ok) {
-        setTitle('ERROR');
-        setMessage(j.error || 'Withdraw failed');
-        setWithdrawnSuccessfully(false);
+        console.error('Withdraw failed:', j.error || 'Withdraw failed');
+        // You could add a toast notification here if needed
       } else {
-        setTitle('SUCCESS');
-        setMessage('Withdrawn!');
-        setWithdrawnSuccessfully(true);
-        // Don't refresh data immediately - wait for dialog to close
+        // Success - refresh data to hide the task
+        onSuccess?.();
       }
     } catch (error) {
-      setTitle('ERROR');
-      setMessage('Withdraw failed');
-      setWithdrawnSuccessfully(false);
+      console.error('Withdraw failed:', error);
+      // You could add a toast notification here if needed
     } finally {
       setIsLoading(false);
     }
   }
 
-  function handleOpenChange(newOpen: boolean) {
-    setOpen(newOpen);
-    // If dialog is being closed and withdrawal was successful, refresh data to hide the task
-    if (!newOpen && withdrawnSuccessfully) {
-      onSuccess?.();
-    }
-  }
-
   return (
-    <StableDialog
-      open={open}
-      onOpenChange={handleOpenChange}
-      trigger={
-        <Button
-          onClick={handleWithdraw}
-          disabled={isLoading}
-          className="w-full bg-[#A5D8FF] text-black hover:bg-[#A5D8FF] rounded-none cursor-pointer text-lg"
-        >
-          {isLoading ? 'Withdrawing...' : 'Withdraw'}
-        </Button>
-      }
-      title={title || 'WITHDRAW FROM TASK'}
-      contentClassName="sm:max-w-md border-2 border-[#A5D8FF] bg-[#000000] rounded-none"
-      headerClassName="p-0"
-      titleClassName="mx-auto w-[90%] j bg-[#C49799] text-xl text-black text-center py-3 mb-4"
+    <Button
+      onClick={handleWithdraw}
+      disabled={isLoading}
+      className="w-full bg-[#A5D8FF] text-black hover:bg-[#A5D8FF] rounded-none cursor-pointer text-lg"
     >
-      <div className="flex items-center justify-center p-4">
-        <p className="text-sm text-white">{message}</p>
-      </div>
-    </StableDialog>
+      {isLoading ? 'Withdrawing...' : 'Withdraw'}
+    </Button>
   );
 }
 
@@ -246,9 +217,6 @@ export default function MyTasksClient({
   defaultTab?: string;
 }) {
   const { data, mutate } = useSWR<MyTasksData>('/api/me/tasks', fetcher);
-  const { data: proofData, mutate: mutateProof } = useSWR<{
-    submissions: ProofSubmission[];
-  }>('/api/me/proof-submissions', fetcher);
 
   function List({
     rows,
@@ -268,7 +236,9 @@ export default function MyTasksClient({
           return (
             <Card
               key={r.taskId + i}
-              className="bg-transparent border-2 border-[#A5D8FF] rounded-none text-white"
+              className={`bg-transparent border-2 rounded-none text-white ${
+                t.mode === 'on-site' ? 'border-yellow-400' : 'border-[#A5D8FF]'
+              }`}
             >
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -324,84 +294,6 @@ export default function MyTasksClient({
     );
   }
 
-  function ProofList({ rows }: { rows: ProofSubmission[] }) {
-    if (!rows?.length)
-      return (
-        <div className="text-sm text-muted-foreground">
-          No proof submissions yet.
-        </div>
-      );
-    return (
-      <div className="grid gap-3">
-        {rows.map((r, i) => {
-          const getStatusColor = (status: string) => {
-            switch (status) {
-              case 'pending':
-                return 'text-yellow-400';
-              case 'approved':
-                return 'text-green-400';
-              case 'rejected':
-                return 'text-red-400';
-              default:
-                return 'text-gray-400';
-            }
-          };
-
-          return (
-            <Card
-              key={r._id + i}
-              className="bg-transparent border-2 border-[#A5D8FF] rounded-none text-white"
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="truncate">{r.taskId.title}</span>
-                  <span
-                    className={`text-sm font-medium ${getStatusColor(
-                      r.status
-                    )}`}
-                  >
-                    {r.status.toUpperCase()}
-                  </span>
-                </CardTitle>
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <div className="flex-1 text-left">
-                    XP: <span>{r.taskId.xpReward ?? 0}</span>
-                  </div>
-                  <div className="flex-1 text-center">
-                    {r.taskId.badgeId && <span>Badge Available</span>}
-                  </div>
-                  <div className="flex-1 text-right">
-                    Submitted: {new Date(r.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-sm font-medium">Your Proof:</span>
-                    <p className="text-sm text-muted-foreground mt-1 p-2 bg-gray-800 rounded">
-                      {r.proof}
-                    </p>
-                  </div>
-                  {r.status === 'rejected' && r.rejectionReason && (
-                    <div>
-                      <span className="text-sm font-medium text-red-400">
-                        Rejection Reason:
-                      </span>
-                      <p className="text-sm text-red-300 mt-1 p-2 bg-red-900/20 rounded">
-                        {r.rejectionReason}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
-  }
-
   return (
     <Tabs defaultValue={defaultTab} className="grid gap-4">
       <TabsList className="w-max rounded-none bg-[#A5D8FF]">
@@ -423,12 +315,6 @@ export default function MyTasksClient({
         >
           Completed
         </TabsTrigger>
-        <TabsTrigger
-          value="proof"
-          className="rounded-none text-base text-black data-[state=active]:text-white"
-        >
-          Proof Submissions
-        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="applied">
@@ -449,9 +335,9 @@ export default function MyTasksClient({
             <div className="pt-2 mt-2">
               <MarkCompletedButton
                 taskId={r.taskId}
+                participation={r}
                 onSuccess={() => {
                   mutate();
-                  mutateProof();
                 }}
               />
             </div>
@@ -461,10 +347,6 @@ export default function MyTasksClient({
 
       <TabsContent value="completed">
         <List rows={data?.completed || []} />
-      </TabsContent>
-
-      <TabsContent value="proof">
-        <ProofList rows={proofData?.submissions || []} />
       </TabsContent>
     </Tabs>
   );

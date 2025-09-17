@@ -1,6 +1,7 @@
 import { requireApproved } from '@/lib/guards';
 import User from '@/models/User';
 import Task from '@/models/Task';
+import Participation from '@/models/Participation';
 
 export async function GET(req: Request) {
   const gate = await requireApproved(req);
@@ -28,13 +29,25 @@ export async function GET(req: Request) {
       return Response.json({ recommendedTasks: [] });
     }
 
+    // Get task IDs that the user has already applied to
+    const appliedTaskIds = await Participation.find(
+      { authUserId },
+      { taskId: 1 }
+    ).lean();
+
+    const appliedTaskIdSet = new Set(
+      appliedTaskIds.map((participation: any) => participation.taskId)
+    );
+
     // Find tasks that match user's category preferences and level
+    // Exclude tasks that the user has already applied to
     const tasks = await Task.find({
       status: 'open',
       category: {
         $in: userPreferences.map((cat: string) => cat.toLowerCase()),
       },
       levelRequirement: { $lte: userLevel },
+      _id: { $nin: Array.from(appliedTaskIdSet) }, // Exclude already applied tasks
     })
       .sort({ startsAt: 1, createdAt: -1 })
       .lean();

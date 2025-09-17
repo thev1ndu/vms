@@ -99,6 +99,14 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
 
+  // Get creator information from session
+  const session = gate.session;
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const creatorId = session.user.id;
+  const creatorEmail = session.user.email;
+
   // 1) Create the task
   const doc = await Task.create({
     title: data.title,
@@ -112,6 +120,8 @@ export async function POST(req: Request) {
     status: data.status,
     startsAt: data.startsAt,
     endsAt: data.endsAt,
+    createdBy: creatorId,
+    createdByEmail: creatorEmail,
   });
 
   // 2) If on-site, generate QR
