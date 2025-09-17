@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { ProfileBadge } from '@/components/ProfileBadge';
 import { Clock, User } from 'lucide-react';
 import AdminBadge from '@/components/AdminBadge';
 import useSWR from 'swr';
@@ -23,7 +23,6 @@ type DisplayNameInfo = {
 export default function ProfileClient() {
   const [newDisplayName, setNewDisplayName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
-  const [showRules, setShowRules] = useState(false);
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -36,40 +35,33 @@ export default function ProfileClient() {
   );
   const { data: meData } = useSWR<any>('/api/me', fetcher);
 
-  // ---------- HONEYCOMB HELPERS (no gaps; controllable gutter) ----------
-  const generateHoneycombPositions = (count: number) => {
-    if (!count) return [] as Array<{ q: number; r: number }>;
-    const out: Array<{ q: number; r: number }> = [];
-    const seen = new Set<string>();
-    const key = (q: number, r: number) => `${q},${r}`;
-    const neigh = (q: number, r: number) => [
-      { q: q + 1, r },
-      { q: q - 1, r },
-      { q, r: r + 1 },
-      { q, r: r - 1 },
-      { q: q + 1, r: r - 1 },
-      { q: q - 1, r: r + 1 },
-    ];
-    const queue = [{ q: 0, r: 0 }];
-    while (queue.length && out.length < count) {
-      const cur = queue.shift()!;
-      const k = key(cur.q, cur.r);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      out.push(cur);
-      for (const n of neigh(cur.q, cur.r)) queue.push(n);
+  // ---------- HEXAGONAL GRID HELPERS (packed flat-topped, no gaps) ----------
+  // Build a simple grid of (col,row) slots
+  const generateHexGridPositions = (count: number) => {
+    if (!count) return [] as Array<{ x: number; y: number }>;
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    const positions: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < count; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      positions.push({ x: col, y: row });
     }
-    return out;
+    return positions;
   };
 
-  // pointy-top axial -> pixel (uses SPACING width, not visual width)
-  const axialToPixel = (q: number, r: number, spacingW: number) => {
-    const spacingH = (Math.sqrt(3) / 2) * spacingW;
-    const x = spacingW * 0.75 * q;
-    const y = spacingH * (r + q / 2);
-    return { x, y, spacingH };
+  // Flat-topped hex packing with spacing:
+  // Horizontal center spacing dx = 0.75 * W + spacing
+  // Vertical center spacing dy = H + spacing = (√3/2) * W + spacing
+  // Odd columns are shifted down by H/2
+  const gridToPixel = (col: number, row: number, hexW: number, spacing: number = 8) => {
+    const hexH = (Math.sqrt(3) / 2) * hexW;
+    const dx = 0.75 * hexW + spacing;
+    const x = col * dx;
+    const y = row * (hexH + spacing) + ((col & 1) ? (hexH + spacing) / 2 : 0);
+    return { x, y, hexH };
   };
-  // ----------------------------------------------------------------------
+  // --------------------------------------------------------------------------
 
   useEffect(() => {
     if (displayNameInfo?.displayName) {
@@ -142,9 +134,9 @@ export default function ProfileClient() {
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
-  // Card chrome: subtle outer ring/offset so each card has visible separation
+  // Card chrome: subtle ring/offset so each card has visible separation
   const cardChrome =
-    'bg-transparent border-2 border-[#A5D8FF] rounded-none text-white ring-1 ring-white/10 ring-offset-2 ring-offset-background';
+    'bg-transparent border-2 border-[#A5D8FF] rounded-none text-white';
 
   return (
     <div className="grid gap-4">
@@ -162,9 +154,9 @@ export default function ProfileClient() {
               Current Display Name
             </label>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-white border-[#A5D8FF]">
+              <ProfileBadge variant="outline">
                 {displayNameInfo?.displayName || 'Not set'}
-              </Badge>
+              </ProfileBadge>
               {displayNameInfo?.isAdmin && <AdminBadge />}
             </div>
           </div>
@@ -230,14 +222,18 @@ export default function ProfileClient() {
         </CardContent>
       </Card>
 
-      {/* Badges — honeycomb with visual gutter */}
+      {/* Badges — gapless hex wall */}
       <Card className={cardChrome}>
         <CardHeader>
           <CardTitle>Badges</CardTitle>
         </CardHeader>
         <CardContent>
           {(() => {
-            if (!meData?.me?.badges?.length) {
+            const icons = (meData?.me?.badges || [])
+              .map((b: any) => b?.icon)
+              .filter(Boolean) as string[];
+
+            if (!icons.length) {
               return (
                 <p className="text-sm text-muted-foreground">
                   No badges earned yet
@@ -245,49 +241,40 @@ export default function ProfileClient() {
               );
             }
 
-            const icons = (meData.me.badges || [])
-              .map((b: any) => b.icon)
-              .filter(Boolean) as string[];
+            const positions = generateHexGridPositions(icons.length);
 
-            const positions = generateHoneycombPositions(icons.length);
-
-            // Calculate optimal sizing based on number of badges
+            // Choose a base hex width responsive to count with better spacing
             const badgeCount = icons.length;
-            let baseSpacingW = 72;
+            const spacing = 5; // Fixed spacing between badges
+            let HEX_W = 60;
             let minHeight = 200;
 
-            // Scale down for more badges
-            if (badgeCount > 12) {
-              baseSpacingW = 48;
+            if (badgeCount > 15) {
+              HEX_W = 40;
               minHeight = 180;
-            } else if (badgeCount > 8) {
-              baseSpacingW = 56;
+            } else if (badgeCount > 10) {
+              HEX_W = 48;
               minHeight = 160;
-            } else if (badgeCount > 4) {
-              baseSpacingW = 64;
-              minHeight = 140;
+            } else if (badgeCount > 6) {
+              HEX_W = 52;
+              minHeight = 150;
             }
 
-            // ---- SIZE & GUTTER ----
-            const GUTTER = Math.max(4, baseSpacingW * 0.08); // Scale gutter with size
-            const SPACING_W = baseSpacingW;
-            const CELL_W = SPACING_W - GUTTER;
+            const CELL_W = HEX_W;
             const CELL_H = (Math.sqrt(3) / 2) * CELL_W;
-            const BORDER = 2;
 
-            // cluster centering uses the spacing width (not the shrunken visual width)
-            const px = positions.map(({ q, r }) =>
-              axialToPixel(q, r, SPACING_W)
-            );
-            const minX = Math.min(...px.map((p) => p.x));
-            const maxX = Math.max(...px.map((p) => p.x));
-            const minY = Math.min(...px.map((p) => p.y));
-            const maxY = Math.max(...px.map((p) => p.y));
-            const clusterW = maxX - minX || 1;
-            const clusterH = maxY - minY || 1;
+            // Compute centers for centering the cluster with spacing
+            const centers = positions.map(({ x, y }) => gridToPixel(x, y, CELL_W, spacing));
+            const minX = Math.min(...centers.map((p) => p.x));
+            const maxX = Math.max(...centers.map((p) => p.x));
+            const minY = Math.min(...centers.map((p) => p.y));
+            const maxY = Math.max(...centers.map((p) => p.y));
 
-            // Calculate dynamic height based on cluster size with padding
-            const padding = 40;
+            // Include proper margins so edges don't clip
+            const clusterW = maxX - minX + CELL_W + spacing; // full width + spacing margin
+            const clusterH = maxY - minY + CELL_H + spacing; // full height + spacing margin
+
+            const padding = 40; // Increased padding for better visibility
             const calculatedHeight = Math.max(minHeight, clusterH + padding);
 
             return (
@@ -296,38 +283,36 @@ export default function ProfileClient() {
                 style={{ height: `${calculatedHeight}px` }}
                 aria-hidden
               >
-                <div className="absolute inset-0 bg-gradient-to-tr from-background/60 via-background/30 to-transparent z-[2]" />
-
-                <div className="absolute inset-0 z-[1]">
+                {/* Tile layer */}
+                <div className="absolute inset-0">
                   {icons.map((src, i) => {
-                    const { q, r } = positions[i];
-                    const { x, y } = axialToPixel(q, r, SPACING_W);
-                    const nx = x - (minX + clusterW / 2);
-                    const ny = y - (minY + clusterH / 2);
+                    const { x: col, y: row } = positions[i];
+                    const { x: cx, y: cy } = gridToPixel(col, row, CELL_W, spacing);
+
+                    // Center the cluster within the container
+                    const nx = cx - (minX + clusterW / 2);
+                    const ny = cy - (minY + clusterH / 2);
 
                     return (
                       <div
                         key={`badge-${i}`}
                         className="
-                          absolute top-1/2 left-1/2 box-border will-change-transform
+                          absolute top-1/2 left-1/2 will-change-transform
                           [clip-path:polygon(25%_0%,75%_0%,100%_50%,75%_100%,25%_100%,0%_50%)]
-                          overflow-hidden bg-foreground/5 backdrop-blur-[1px]
-                          border border-white/30
-                          shadow-[0_0_0_1px_rgba(255,255,255,0.08)]
+                          overflow-hidden
                         "
-                        style={
-                          {
-                            width: `${CELL_W}px`,
-                            height: `${CELL_H}px`,
-                            borderWidth: `${BORDER}px`,
-                            transform: `translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px))`,
-                          } as React.CSSProperties
-                        }
+                        style={{
+                          width: `${CELL_W}px`,
+                          height: `${CELL_H}px`,
+                          transform: `translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px))`,
+                          // Uncomment to defeat rare sub-pixel hairlines:
+                          // transform: `translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px)) scale(1.001)`,
+                        } as React.CSSProperties}
                       >
                         <img
                           src={src}
                           alt=""
-                          className="absolute inset-0 w-full h-full object-cover"
+                          className="absolute inset-0 h-full w-full object-cover select-none"
                           draggable={false}
                           loading="lazy"
                         />
