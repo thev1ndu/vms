@@ -4,7 +4,14 @@ import { auth } from '@/lib/auth';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Settings, BarChart3, Shield } from 'lucide-react';
+import {
+  Users,
+  Settings,
+  BarChart3,
+  Shield,
+  Tag,
+  CheckCircle,
+} from 'lucide-react';
 
 export default async function AdminPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -62,6 +69,42 @@ export default async function AdminPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
+              Category Management
+            </CardTitle>
+            <Tag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Categories</div>
+            <p className="text-xs text-muted-foreground">
+              Create and manage task categories
+            </p>
+            <Link href="/admin/categories">
+              <Button className="w-full mt-4">Manage Categories</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Proof Submissions
+            </CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Proof Review</div>
+            <p className="text-xs text-muted-foreground">
+              Review and approve user proof submissions for badges
+            </p>
+            <Link href="/admin/proof-submissions">
+              <Button className="w-full mt-4">Review Proofs</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
               System Settings
             </CardTitle>
             <Settings className="h-4 w-4 text-muted-foreground" />
@@ -100,6 +143,12 @@ export default async function AdminPage() {
                   <Button variant="outline" className="w-full justify-start">
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Manage Tasks
+                  </Button>
+                </Link>
+                <Link href="/admin/categories">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Tag className="h-4 w-4 mr-2" />
+                    Manage Categories
                   </Button>
                 </Link>
               </div>

@@ -14,6 +14,7 @@ type UserDoc = {
   badges?: any[];
   volunteerId?: string;
   displayName?: string;
+  categoryPreferences?: string[];
 };
 
 export async function GET(req: Request) {
@@ -32,7 +33,14 @@ export async function GET(req: Request) {
 
   const me = (await User.findOne(
     { authUserId },
-    { xp: 1, level: 1, badges: 1, volunteerId: 1, displayName: 1 }
+    {
+      xp: 1,
+      level: 1,
+      badges: 1,
+      volunteerId: 1,
+      displayName: 1,
+      categoryPreferences: 1,
+    }
   )
     .lean()
     .exec()) as UserDoc | null;
@@ -107,6 +115,7 @@ export async function GET(req: Request) {
       level: me?.level ?? 1,
       volunteerId: me?.volunteerId ?? null,
       displayName: me?.displayName ?? null,
+      categoryPreferences: me?.categoryPreferences ?? [],
       badges: docs.map((d: any) => ({
         _id: String(d._id),
         name: d.name,

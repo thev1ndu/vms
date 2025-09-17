@@ -4,6 +4,7 @@ import Task from '@/models/Task';
 import Participation from '@/models/Participation';
 import User from '@/models/User';
 import Badge from '@/models/Badge';
+import ProofSubmission from '@/models/ProofSubmission';
 import { levelForXP } from '@/lib/level';
 import { grantBadgeBySlug } from '@/lib/badges';
 
@@ -71,58 +72,44 @@ export async function POST(req: Request) {
       { status: 400 }
     );
 
-  // Award XP
-  const xpGain = task.xpReward ?? 0;
-  const user = await User.findOne({ authUserId });
-  if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
-  const nextXP = (user.xp ?? 0) + xpGain;
-  const prevLevel = user.level ?? 1;
-  const newLevel = levelForXP(nextXP);
+  // Check if there's already a pending proof submission for this task
+  const existingProof = await ProofSubmission.findOne({
+    taskId: String(task._id),
+    authUserId,
+    status: 'pending',
+  });
 
-  user.xp = nextXP;
-  user.level = newLevel;
-
-  // Optional badge
-  const badges: any[] = [];
-  if (task.badgeId) {
-    const exists = (user.badges || []).some(
-      (b: any) => String(b) === String(task.badgeId)
+  if (existingProof) {
+    return Response.json(
+      {
+        error: 'You already have a pending proof submission for this task',
+      },
+      { status: 400 }
     );
-    if (!exists) user.badges = [...(user.badges || []), task.badgeId as any];
-    badges.push(task.badgeId);
-  }
-  await user.save();
-
-  // Grant level milestone badges if level increased
-  if (newLevel !== prevLevel) {
-    if (newLevel >= 5) await grantBadgeBySlug(authUserId, 'level-5');
-    if (newLevel >= 10) await grantBadgeBySlug(authUserId, 'level-10');
   }
 
-  // Grant XP milestone badges
-  if (nextXP >= 1000) await grantBadgeBySlug(authUserId, 'xp-1000');
-  if (nextXP >= 5000) await grantBadgeBySlug(authUserId, 'xp-5000');
-  if (nextXP >= 10000) await grantBadgeBySlug(authUserId, 'xp-10000');
+  // Create a new proof submission
+  const proofSubmission = await ProofSubmission.create({
+    taskId: String(task._id),
+    authUserId,
+    proof,
+    status: 'pending',
+  });
 
-  // Update participation with proof and mark as completed
+  // Update participation to store proof but don't mark as completed yet
   await Participation.updateOne(
     { taskId: String(task._id), authUserId },
     {
       $set: {
-        status: 'completed',
-        completedAt: new Date(),
         proof: proof,
-        xpEarned: xpGain,
-        badgesEarned: badges,
       },
     }
   );
 
   return Response.json({
     ok: true,
-    message: 'Task marked as completed',
-    xpAwarded: xpGain,
-    level: user.level,
-    badgesEarned: badges.length,
+    message:
+      'Proof submitted successfully. Your submission is pending admin approval.',
+    proofSubmissionId: proofSubmission._id,
   });
 }

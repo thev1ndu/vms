@@ -1,20 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useSSE } from '@/hooks/useSSE';
 
 export default function BadgeFixer() {
   const [hasRun, setHasRun] = useState(false);
-  const [badgeEvents, setBadgeEvents] = useState<any[]>([]);
-
-  // SSE connection for real-time badge updates
-  const { close: closeSSE } = useSSE((event, data) => {
-    if (event === 'badge-awarded' || event === 'badges-updated') {
-      setBadgeEvents((prev) => [
-        ...prev,
-        { event, data, timestamp: Date.now() },
-      ]);
-    }
-  });
 
   useEffect(() => {
     // Check if we've already run the badge fix
@@ -64,13 +52,6 @@ export default function BadgeFixer() {
       clearTimeout(timeoutId);
     };
   }, [hasRun]);
-
-  // Cleanup SSE connection on unmount
-  useEffect(() => {
-    return () => {
-      closeSSE();
-    };
-  }, [closeSSE]);
 
   // Return null to not render anything visible
   return null;

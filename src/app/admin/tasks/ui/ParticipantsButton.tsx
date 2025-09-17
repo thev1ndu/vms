@@ -11,6 +11,13 @@ export default function ParticipantsButton({ taskId }: { taskId: string }) {
   const [open, setOpen] = useState(false);
   const [proofDialogOpen, setProofDialogOpen] = useState(false);
   const [selectedProof, setSelectedProof] = useState<string>('');
+  const [proofDialogTitle, setProofDialogTitle] =
+    useState<string>('COMPLETION PROOF');
+  const [currentProofSubmission, setCurrentProofSubmission] = useState<{
+    authUserId: string;
+    proofSubmissionId?: string;
+  } | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
 
   // Remove participant state - consolidated like Delete Task Dialog
   const [removing, setRemoving] = useState<string | null>(null);
@@ -28,6 +35,9 @@ export default function ParticipantsButton({ taskId }: { taskId: string }) {
       status: string;
       proof: string | null;
       completedAt: string | null;
+      hasProofSubmission: boolean;
+      proofSubmission: string | null;
+      proofSubmissionId: string | null;
     }>;
   }>(`/api/admin/tasks/${taskId}/participants`, fetcher);
 
@@ -44,9 +54,57 @@ export default function ParticipantsButton({ taskId }: { taskId: string }) {
     window.dispatchEvent(new Event('task:refresh'));
   }
 
-  function viewProof(proof: string) {
+  function viewProof(
+    proof: string,
+    isSubmission: boolean = false,
+    authUserId?: string,
+    proofSubmissionId?: string
+  ) {
     setSelectedProof(proof);
+    setProofDialogTitle(
+      isSubmission ? 'PENDING PROOF SUBMISSION' : 'COMPLETION PROOF'
+    );
+    setCurrentProofSubmission(
+      isSubmission && authUserId ? { authUserId, proofSubmissionId } : null
+    );
     setProofDialogOpen(true);
+  }
+
+  async function approveProofSubmission() {
+    if (!currentProofSubmission?.proofSubmissionId) return;
+
+    setIsApproving(true);
+    try {
+      const res = await fetch(
+        `/api/admin/proof-submissions/${currentProofSubmission.proofSubmissionId}/approve`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        }
+      );
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || 'Failed to approve submission');
+        return;
+      }
+
+      const result = await res.json();
+      alert(
+        `Approved! Awarded ${result.xpAwarded} XP and ${result.badgesAwarded} badge(s). New level: ${result.newLevel}`
+      );
+
+      // Close dialog and refresh data
+      setProofDialogOpen(false);
+      mutate();
+      window.dispatchEvent(new Event('me:refresh'));
+      window.dispatchEvent(new Event('task:refresh'));
+    } catch (error) {
+      alert('Failed to approve submission');
+    } finally {
+      setIsApproving(false);
+    }
   }
 
   function initiateRemoveParticipant(authUserId: string) {
@@ -124,7 +182,11 @@ export default function ParticipantsButton({ taskId }: { taskId: string }) {
               <div
                 key={p.authUserId}
                 className={`grid grid-cols-6 items-center gap-2 border-b py-2 px-2 text-sm text-white ${
-                  p.status === 'completed' ? 'bg-green-500' : ''
+                  p.status === 'completed'
+                    ? 'bg-green-500'
+                    : p.hasProofSubmission
+                    ? 'bg-yellow-500'
+                    : ''
                 }`}
               >
                 <div className="col-span-2 truncate flex items-center gap-1">
@@ -152,6 +214,22 @@ export default function ParticipantsButton({ taskId }: { taskId: string }) {
                     >
                       View Proof
                     </Button>
+                  ) : p.hasProofSubmission ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        viewProof(
+                          p.proofSubmission!,
+                          true,
+                          p.authUserId,
+                          p.proofSubmissionId!
+                        )
+                      }
+                      className="rounded-none bg-[#000000] text-white hover:bg-[#000000] hover:text-white border-1 border-[#000000]"
+                    >
+                      View Proof
+                    </Button>
                   ) : p.status === 'accepted' ? (
                     <Button
                       size="sm"
@@ -172,7 +250,7 @@ export default function ParticipantsButton({ taskId }: { taskId: string }) {
       <StableDialog
         open={proofDialogOpen}
         onOpenChange={setProofDialogOpen}
-        title="COMPLETION PROOF"
+        title={proofDialogTitle}
         contentClassName="sm:max-w-lg border-2 border-[#A5D8FF] bg-[#000000] rounded-none"
         headerClassName="p-0"
         titleClassName="mx-auto w-[90%] bg-[#C49799] j text-xl text-black text-center py-3 mb-4"
@@ -183,6 +261,19 @@ export default function ParticipantsButton({ taskId }: { taskId: string }) {
               {selectedProof}
             </p>
           </div>
+
+          {/* Show Approve button for pending proof submissions */}
+          {currentProofSubmission && (
+            <div className="flex justify-end p-4 pt-0">
+              <Button
+                onClick={approveProofSubmission}
+                disabled={isApproving}
+                className="bg-green-600 hover:bg-green-700 text-white rounded-none"
+              >
+                {isApproving ? 'Approving...' : 'Approve'}
+              </Button>
+            </div>
+          )}
         </div>
       </StableDialog>
 

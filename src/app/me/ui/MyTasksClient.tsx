@@ -35,6 +35,20 @@ type MyTasksData = {
   completed: Participation[];
 };
 
+type ProofSubmission = {
+  _id: string;
+  taskId: {
+    _id: string;
+    title: string;
+    xpReward?: number;
+    badgeId?: string;
+  };
+  proof: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  rejectionReason?: string;
+};
+
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
 function MarkCompletedButton({
@@ -73,11 +87,9 @@ function MarkCompletedButton({
         setCompletedSuccessfully(false);
       } else {
         setTitle('SUCCESS');
-        const xpMessage = j.xpAwarded ? ` +${j.xpAwarded} XP` : '';
-        const badgeMessage =
-          j.badgesEarned > 0 ? ` +${j.badgesEarned} Badge(s)` : '';
-        const levelMessage = j.level ? ` (Level ${j.level})` : '';
-        setMessage(`Task completed!${xpMessage}${badgeMessage}${levelMessage}`);
+        setMessage(
+          'Proof submitted successfully! Your submission is pending admin approval. You will receive XP and badges once approved.'
+        );
         setCompletedSuccessfully(true);
         setProof('');
       }
@@ -234,6 +246,9 @@ export default function MyTasksClient({
   defaultTab?: string;
 }) {
   const { data, mutate } = useSWR<MyTasksData>('/api/me/tasks', fetcher);
+  const { data: proofData, mutate: mutateProof } = useSWR<{
+    submissions: ProofSubmission[];
+  }>('/api/me/proof-submissions', fetcher);
 
   function List({
     rows,
@@ -309,6 +324,84 @@ export default function MyTasksClient({
     );
   }
 
+  function ProofList({ rows }: { rows: ProofSubmission[] }) {
+    if (!rows?.length)
+      return (
+        <div className="text-sm text-muted-foreground">
+          No proof submissions yet.
+        </div>
+      );
+    return (
+      <div className="grid gap-3">
+        {rows.map((r, i) => {
+          const getStatusColor = (status: string) => {
+            switch (status) {
+              case 'pending':
+                return 'text-yellow-400';
+              case 'approved':
+                return 'text-green-400';
+              case 'rejected':
+                return 'text-red-400';
+              default:
+                return 'text-gray-400';
+            }
+          };
+
+          return (
+            <Card
+              key={r._id + i}
+              className="bg-transparent border-2 border-[#A5D8FF] rounded-none text-white"
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="truncate">{r.taskId.title}</span>
+                  <span
+                    className={`text-sm font-medium ${getStatusColor(
+                      r.status
+                    )}`}
+                  >
+                    {r.status.toUpperCase()}
+                  </span>
+                </CardTitle>
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <div className="flex-1 text-left">
+                    XP: <span>{r.taskId.xpReward ?? 0}</span>
+                  </div>
+                  <div className="flex-1 text-center">
+                    {r.taskId.badgeId && <span>Badge Available</span>}
+                  </div>
+                  <div className="flex-1 text-right">
+                    Submitted: {new Date(r.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-sm font-medium">Your Proof:</span>
+                    <p className="text-sm text-muted-foreground mt-1 p-2 bg-gray-800 rounded">
+                      {r.proof}
+                    </p>
+                  </div>
+                  {r.status === 'rejected' && r.rejectionReason && (
+                    <div>
+                      <span className="text-sm font-medium text-red-400">
+                        Rejection Reason:
+                      </span>
+                      <p className="text-sm text-red-300 mt-1 p-2 bg-red-900/20 rounded">
+                        {r.rejectionReason}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <Tabs defaultValue={defaultTab} className="grid gap-4">
       <TabsList className="w-max rounded-none bg-[#A5D8FF]">
@@ -330,6 +423,12 @@ export default function MyTasksClient({
         >
           Completed
         </TabsTrigger>
+        <TabsTrigger
+          value="proof"
+          className="rounded-none text-base text-black data-[state=active]:text-white"
+        >
+          Proof Submissions
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="applied">
@@ -350,7 +449,10 @@ export default function MyTasksClient({
             <div className="pt-2 mt-2">
               <MarkCompletedButton
                 taskId={r.taskId}
-                onSuccess={() => mutate()}
+                onSuccess={() => {
+                  mutate();
+                  mutateProof();
+                }}
               />
             </div>
           )}
@@ -359,6 +461,10 @@ export default function MyTasksClient({
 
       <TabsContent value="completed">
         <List rows={data?.completed || []} />
+      </TabsContent>
+
+      <TabsContent value="proof">
+        <ProofList rows={proofData?.submissions || []} />
       </TabsContent>
     </Tabs>
   );

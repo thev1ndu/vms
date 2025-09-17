@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
+import useSWR from 'swr';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,19 +19,18 @@ import {
 const clamp = (v: number, min: number, max: number) =>
   Math.min(max, Math.max(min, v));
 
-const categories = [
-  'logistics',
-  'ushering',
-  'media',
-  'registration',
-  'hospitality',
-  'cleanup',
-] as const;
+type Category = {
+  _id: string;
+  name: string;
+  description?: string;
+};
 
-const categoryOptions = [
-  ...categories,
-  'custom', // Special option to allow custom input
-] as const;
+const fetcher = async (url: string) => {
+  const res = await fetch(url, { credentials: 'same-origin' });
+  const j = await res.json();
+  if (!res.ok) throw new Error(j?.error || 'Failed to load');
+  return j;
+};
 
 // ⬇️  New optional badge fields
 const Schema = z.object({
@@ -52,11 +52,18 @@ const Schema = z.object({
 type FormState = z.infer<typeof Schema>;
 
 export default function TaskForm() {
+  // Fetch categories from API
+  const { data: categoriesData, error: categoriesError } = useSWR<{
+    categories: Category[];
+  }>('/api/admin/categories', fetcher);
+
+  const categories = categoriesData?.categories || [];
+
   const [data, setData] = useState<FormState>({
     title: '',
     description: '',
     mode: 'off-site',
-    category: categories[0],
+    category: '',
     levelRequirement: 1,
     volunteersRequired: 1,
     xpReward: 50,
@@ -68,18 +75,28 @@ export default function TaskForm() {
     badgeDescription: '',
   });
   const [submitting, setSubmitting] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    categories[0]
-  );
-  const [customCategory, setCustomCategory] = useState<string>('');
-  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+
+  // Update selected category when categories are loaded
+  useEffect(() => {
+    if (categories.length > 0 && !selectedCategoryId) {
+      const firstCategory = categories[0];
+      setSelectedCategoryId(firstCategory._id);
+      setData((prev) => ({ ...prev, category: firstCategory._id }));
+    }
+  }, [categories, selectedCategoryId]);
 
   async function submit() {
-    // Update category based on selection
-    const finalCategory = isCustomCategory
-      ? customCategory.trim()
-      : selectedCategory;
-    const updatedData = { ...data, category: finalCategory };
+    // Find the category name from the selected ID
+    const selectedCategory = categories.find(
+      (cat) => cat._id === selectedCategoryId
+    );
+    if (!selectedCategory) {
+      alert('Please select a valid category');
+      return;
+    }
+
+    const updatedData = { ...data, category: selectedCategory.name };
 
     const parsed = Schema.safeParse(updatedData);
     if (!parsed.success) {
@@ -126,9 +143,10 @@ export default function TaskForm() {
       badgeIcon: '',
       badgeDescription: '',
     });
-    setSelectedCategory(categories[0]);
-    setCustomCategory('');
-    setIsCustomCategory(false);
+    if (categories.length > 0) {
+      setSelectedCategoryId(categories[0]._id);
+      setData((prev) => ({ ...prev, category: categories[0]._id }));
+    }
     window.dispatchEvent(new Event('task:refresh'));
   }
 
@@ -171,36 +189,30 @@ export default function TaskForm() {
           </div>
           <div className="grid gap-1">
             <Label className="text-[#A5D8FF]">Category</Label>
-            <Select
-              value={isCustomCategory ? 'custom' : selectedCategory}
-              onValueChange={(value) => {
-                if (value === 'custom') {
-                  setIsCustomCategory(true);
-                } else {
-                  setIsCustomCategory(false);
-                  setSelectedCategory(value);
-                }
-              }}
-            >
-              <SelectTrigger className="rounded-none text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-none">
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-                <SelectItem value="custom">Custom...</SelectItem>
-              </SelectContent>
-            </Select>
-            {isCustomCategory && (
-              <Input
-                placeholder="Enter custom category name"
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
-                className="text-white rounded-none"
-              />
+            {categoriesError ? (
+              <div className="text-red-500 text-sm">
+                Error loading categories: {categoriesError.message}
+              </div>
+            ) : (
+              <Select
+                value={selectedCategoryId}
+                onValueChange={(value) => {
+                  setSelectedCategoryId(value);
+                  setData({ ...data, category: value });
+                }}
+                disabled={categories.length === 0}
+              >
+                <SelectTrigger className="rounded-none text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  {categories.map((category) => (
+                    <SelectItem key={category._id} value={category._id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
         </div>

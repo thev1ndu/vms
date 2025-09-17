@@ -27,6 +27,9 @@ export interface IUser {
     lastActiveAt?: Date;
   };
 
+  // Category preferences for task recommendations
+  categoryPreferences?: string[]; // Array of category names
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +56,8 @@ const UserSchema = new Schema<IUser>(
       count: { type: Number, default: 0, min: 0 },
       lastActiveAt: { type: Date },
     } as any,
+
+    categoryPreferences: [{ type: String, trim: true }],
   },
   { timestamps: true, versionKey: false }
 );

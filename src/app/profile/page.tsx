@@ -18,7 +18,9 @@ export default async function ProfilePage() {
         PROFILE
       </h2>
       <VolunteerCard />
-      <ProfileClient />
+      <div className="mt-4">
+        <ProfileClient />
+      </div>
     </>
   );
 }

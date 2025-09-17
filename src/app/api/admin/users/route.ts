@@ -51,6 +51,7 @@ export async function GET(req: Request) {
   const limit = parseInt(url.searchParams.get('limit') || '20');
   const search = url.searchParams.get('search') || '';
   const statusFilter = url.searchParams.get('status') || '';
+  const categoryFilter = url.searchParams.get('category') || '';
 
   const authUsersColl = await getAuthUsersCollection();
 
@@ -69,14 +70,33 @@ export async function GET(req: Request) {
 
   const normalized = allRaw.map(normalizeAuthUser).filter((u) => !!u.id);
 
-  // Join with app DB users to pull volunteerId/xp/level/displayName
+  // Join with app DB users to pull volunteerId/xp/level/displayName/categoryPreferences
   const ids = normalized.map((u) => u.id);
-  const appUsers = await (await User)
+  const appUsers = await (
+    await User
+  )
     .find(
       { authUserId: { $in: ids } },
-      { authUserId: 1, volunteerId: 1, xp: 1, level: 1, displayName: 1 }
+      {
+        authUserId: 1,
+        volunteerId: 1,
+        xp: 1,
+        level: 1,
+        displayName: 1,
+        categoryPreferences: 1,
+      }
     )
     .lean();
+
+  // Debug: Log what we found
+  console.log('Found app users:', appUsers.length);
+  appUsers.forEach((user: any) => {
+    console.log(`User ${user.authUserId}:`, {
+      categoryPreferences: user.categoryPreferences,
+      hasPreferences: !!user.categoryPreferences,
+      preferencesLength: user.categoryPreferences?.length || 0,
+    });
+  });
 
   const byId = new Map(appUsers.map((u: any) => [u.authUserId, u]));
 
@@ -93,6 +113,7 @@ export async function GET(req: Request) {
       level: appUser?.level ?? 1,
       displayName: appUser?.displayName || null,
       createdAt: au.createdAt ?? null,
+      categoryPreferences: appUser?.categoryPreferences || [],
     };
   });
 
@@ -108,6 +129,24 @@ export async function GET(req: Request) {
         (user.volunteerId &&
           user.volunteerId.toLowerCase().includes(searchLower))
     );
+  }
+
+  // Apply category filter
+  if (categoryFilter && categoryFilter !== 'all') {
+    if (categoryFilter === 'none') {
+      // Filter users with no category preferences
+      users = users.filter(
+        (user) =>
+          !user.categoryPreferences || user.categoryPreferences.length === 0
+      );
+    } else {
+      // Filter users with the specific category preference
+      users = users.filter(
+        (user) =>
+          user.categoryPreferences &&
+          user.categoryPreferences.includes(categoryFilter)
+      );
+    }
   }
 
   // Apply pagination

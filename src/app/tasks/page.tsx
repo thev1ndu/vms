@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import TasksClient from './ui/TasksClient';
+import RecommendedTasksClient from './ui/RecommendedTasksClient';
 import Header from '@/components/Header';
 
 export default async function VolunteerTasksPage() {
@@ -15,7 +16,10 @@ export default async function VolunteerTasksPage() {
       <h2 className="text-4xl j font-bold text-center text-[#A5D8FF] mb-8">
         MISSION CONTROL
       </h2>
-      <TasksClient />
+      <div className="space-y-6">
+        <RecommendedTasksClient />
+        <TasksClient />
+      </div>
     </>
   );
 }

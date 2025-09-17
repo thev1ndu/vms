@@ -2,7 +2,6 @@ import { requireAdmin } from '@/lib/guards';
 import { authDb } from '@/lib/auth';
 import User from '@/models/User';
 import Participation from '@/models/Participation';
-import { MessageModel, ConversationModel } from '@/models/PostgresModels';
 import Connection from '@/models/Connection';
 import Task from '@/models/Task';
 import { z } from 'zod';
@@ -90,23 +89,6 @@ export async function DELETE(req: Request) {
     if (user) {
       // Delete user's participations
       await Participation.deleteMany({ authUserId });
-
-      // Delete user's messages
-      const pool = await import('@/lib/postgres').then((m) =>
-        m.getPostgresPool()
-      );
-      await pool.query('DELETE FROM messages WHERE sender_auth_user_id = $1', [
-        authUserId,
-      ]);
-
-      // Remove user from conversations (participants and createdBy)
-      await pool.query(
-        'UPDATE conversations SET participants = array_remove(participants, $1) WHERE $1 = ANY(participants)',
-        [authUserId]
-      );
-      await pool.query('DELETE FROM conversations WHERE created_by = $1', [
-        authUserId,
-      ]);
 
       // Delete user's connections
       await Connection.deleteMany({

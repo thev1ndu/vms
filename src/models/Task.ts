@@ -1,17 +1,12 @@
 import { Schema, model, models } from 'mongoose';
 import { dbConnect } from '@/lib/db';
-import {
-  TASK_CATEGORIES,
-  type TaskCategoryTag,
-  type TaskMode,
-  type TaskStatus,
-} from './constants';
+import { type TaskMode, type TaskStatus } from './constants';
 
 export interface ITask {
   title: string;
   description: string;
   mode: TaskMode; // "on-site" | "off-site"
-  category: TaskCategoryTag; // from TASK_CATEGORIES
+  category: string; // Category name or ID
   levelRequirement: number; // min volunteer level
   volunteersRequired: number;
   volunteersAssigned: string[]; // authUserId[]
@@ -38,7 +33,6 @@ const TaskSchema = new Schema<ITask>(
     },
     category: {
       type: String,
-      enum: TASK_CATEGORIES,
       required: true,
       index: true,
     },

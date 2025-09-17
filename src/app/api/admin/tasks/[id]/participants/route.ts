@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/guards';
 import Participation from '@/models/Participation';
 import User from '@/models/User';
+import ProofSubmission from '@/models/ProofSubmission';
 
 export async function GET(
   req: Request,
@@ -36,9 +37,24 @@ export async function GET(
     )
     .lean();
 
+  // Get proof submissions for this task
+  const PS = await ProofSubmission;
+  const proofSubmissions = await (await PS)
+    .find(
+      { taskId, status: 'pending' },
+      { authUserId: 1, proof: 1, status: 1, _id: 1 }
+    )
+    .lean();
+
+  const proofByUserId = new Map(
+    proofSubmissions.map((ps: any) => [ps.authUserId, ps])
+  );
+
   const byId = new Map(profs.map((p: any) => [p.authUserId, p]));
   const rows = parts.map((p) => {
     const u: any = byId.get(p.authUserId) || {};
+    const proofSubmission = proofByUserId.get(p.authUserId);
+
     return {
       authUserId: p.authUserId,
       joinedAt: p.createdAt,
@@ -49,6 +65,9 @@ export async function GET(
       status: p.status,
       proof: p.proof ?? null,
       completedAt: p.completedAt ?? null,
+      hasProofSubmission: !!proofSubmission,
+      proofSubmission: proofSubmission?.proof ?? null,
+      proofSubmissionId: proofSubmission?._id ?? null,
     };
   });
 

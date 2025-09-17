@@ -19,6 +19,7 @@ import {
   Shield,
   User,
   Cog,
+  Tag,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -45,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type AdminUser = {
   authUserId: string;
@@ -57,6 +59,7 @@ type AdminUser = {
   level: number;
   displayName?: string | null;
   createdAt?: string | null;
+  categoryPreferences?: string[];
 };
 
 type PaginationData = {
@@ -81,15 +84,22 @@ function UserCard({
   onSuspend,
   onSetTag,
   onDelete,
+  onUpdatePreferences,
+  availableCategories,
 }: {
   user: AdminUser;
   onApprove: (id: string, email?: string) => void;
   onSuspend: (id: string, email?: string) => void;
   onSetTag: (id: string, tag: string) => Promise<void>;
   onDelete: (id: string, email?: string) => Promise<void>;
+  onUpdatePreferences: (id: string, preferences: string[]) => Promise<void>;
+  availableCategories: any[];
 }) {
   const [editTagOpen, setEditTagOpen] = useState(false);
   const [tag, setTag] = useState(user.displayName || '');
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+  const [loadingPreferences, setLoadingPreferences] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -102,6 +112,13 @@ function UserCard({
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getCategoryColor = (categoryName: string) => {
+    const category = availableCategories.find(
+      (cat) => cat.name === categoryName
+    );
+    return category?.color || '#A5D8FF'; // Default color if not found
   };
 
   const getRoleIcon = (role: string) => {
@@ -132,6 +149,50 @@ function UserCard({
       day: 'numeric',
       year: 'numeric',
     });
+  };
+
+  const loadUserPreferences = async () => {
+    setLoadingPreferences(true);
+    try {
+      const response = await fetch(
+        `/api/admin/users/${user.authUserId}/preferences`
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setSelectedPreferences(data.user.categoryPreferences || []);
+      } else {
+        alert(data.error || 'Failed to load preferences');
+      }
+    } catch (error) {
+      console.error('Error loading preferences:', error);
+      alert('Failed to load preferences');
+    } finally {
+      setLoadingPreferences(false);
+    }
+  };
+
+  const handlePreferencesOpen = async () => {
+    setPreferencesOpen(true);
+    await loadUserPreferences();
+  };
+
+  const handlePreferenceChange = (categoryName: string, checked: boolean) => {
+    if (checked) {
+      setSelectedPreferences((prev) => [...prev, categoryName]);
+    } else {
+      setSelectedPreferences((prev) =>
+        prev.filter((name) => name !== categoryName)
+      );
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    try {
+      await onUpdatePreferences(user.authUserId, selectedPreferences);
+      setPreferencesOpen(false);
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+    }
   };
 
   return (
@@ -168,6 +229,25 @@ function UserCard({
                 LEVEL {user.level} • {user.xp}XP
               </span>
             </div>
+
+            {/* Category Preferences Display */}
+            {user.categoryPreferences &&
+              user.categoryPreferences.length > 0 && (
+                <div className="flex items-center space-x-1 text-xs text-muted-foreground mt-1">
+                  <span>PREFERENCES:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {user.categoryPreferences.map((category, index) => (
+                      <Badge
+                        key={index}
+                        className="text-xs py-[-10px] rounded-none bg-[#000000]"
+                        style={{ color: getCategoryColor(category) }}
+                      >
+                        {category}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
           </div>
 
           <div className="flex items-center space-x-1">
@@ -206,6 +286,10 @@ function UserCard({
                     <DropdownMenuItem onClick={() => setEditTagOpen(true)}>
                       <Edit3 className="w-4 h-4 mr-2" />
                       Edit Display Name
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handlePreferencesOpen}>
+                      <Tag className="w-4 h-4 mr-2" />
+                      Edit Preferences
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onSuspend(user.authUserId, user.email)}
@@ -272,6 +356,85 @@ function UserCard({
           </div>
         </div>
       </StableDialog>
+
+      {/* Edit Preferences Dialog */}
+      <StableDialog
+        open={preferencesOpen}
+        onOpenChange={setPreferencesOpen}
+        title="EDIT CATEGORY PREFERENCES"
+        contentClassName="sm:max-w-md border-2 border-[#A5D8FF] bg-[#000000] rounded-none"
+        headerClassName="p-0"
+        titleClassName="mx-auto w-[90%] bg-[#C49799] j text-xl text-black text-center py-3 mb-4"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-center p-4">
+            <div className="w-full">
+              <label className="text-sm font-medium text-white block mb-3">
+                Select preferred task categories for {user.name || 'this user'}:
+              </label>
+
+              {loadingPreferences ? (
+                <div className="text-center text-white">
+                  Loading categories...
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {availableCategories.map((category) => (
+                    <div
+                      key={category._id}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
+                        id={`category-${category._id}`}
+                        checked={selectedPreferences.includes(category.name)}
+                        onCheckedChange={(checked) =>
+                          handlePreferenceChange(
+                            category.name,
+                            checked as boolean
+                          )
+                        }
+                        className="rounded-none"
+                      />
+                      <label
+                        htmlFor={`category-${category._id}`}
+                        className="text-sm text-white flex items-center space-x-2 cursor-pointer"
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span>{category.name}</span>
+                        {category.description && (
+                          <span className="text-xs text-gray-400">
+                            - {category.description}
+                          </span>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 pt-4 sm:flex-row sm:justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => setPreferencesOpen(false)}
+              className="rounded-none order-2 sm:order-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSavePreferences}
+              disabled={loadingPreferences}
+              className="bg-[#A5D8FF] text-black hover:bg-[#A5D8FF] rounded-none order-1 sm:order-2"
+            >
+              {loadingPreferences ? 'Saving...' : 'Save Preferences'}
+            </Button>
+          </div>
+        </div>
+      </StableDialog>
     </Card>
   );
 }
@@ -280,8 +443,10 @@ export default function AdminUsersClient() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
+  const [availableCategories, setAvailableCategories] = useState<any[]>([]);
 
   const { data, error, isLoading, mutate } = useSWR<{
     users: AdminUser[];
@@ -289,12 +454,30 @@ export default function AdminUsersClient() {
   }>(
     `/api/admin/users?page=${page}&limit=10&search=${encodeURIComponent(
       search
-    )}&status=${statusFilter}`,
+    )}&status=${statusFilter}&category=${encodeURIComponent(categoryFilter)}`,
     fetcher
   );
 
   const users = data?.users ?? [];
   const pagination = data?.pagination;
+
+  // Fetch available categories
+  const { data: categoriesData } = useSWR('/api/admin/categories', fetcher);
+  React.useEffect(() => {
+    if (categoriesData?.categories) {
+      setAvailableCategories(categoriesData.categories);
+    }
+  }, [categoriesData]);
+
+  // Debug: Log user data
+  console.log('Users received in AdminUsersClient:', users.length);
+  users.forEach((user) => {
+    console.log(`User ${user.authUserId}:`, {
+      categoryPreferences: user.categoryPreferences,
+      hasPreferences: !!user.categoryPreferences,
+      preferencesLength: user.categoryPreferences?.length || 0,
+    });
+  });
 
   async function approve(authUserId: string, email?: string) {
     const res = await fetch('/api/admin/approve-user', {
@@ -348,6 +531,23 @@ export default function AdminUsersClient() {
     setUserToDelete(null);
   }
 
+  async function updatePreferences(authUserId: string, preferences: string[]) {
+    const res = await fetch(`/api/admin/users/${authUserId}/preferences`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categoryPreferences: preferences }),
+    });
+
+    const j = await res.json();
+    if (!res.ok) {
+      alert(j.error || 'Failed to update preferences');
+      return;
+    }
+
+    alert('Preferences updated successfully');
+    mutate();
+  }
+
   const handleSearch = (value: string) => {
     setSearch(value);
     setPage(1); // Reset to first page when searching
@@ -355,6 +555,11 @@ export default function AdminUsersClient() {
 
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
+    setPage(1); // Reset to first page when filtering
+  };
+
+  const handleCategoryFilter = (value: string) => {
+    setCategoryFilter(value);
     setPage(1); // Reset to first page when filtering
   };
 
@@ -383,7 +588,7 @@ export default function AdminUsersClient() {
       {/* Search and Filters */}
       <Card className="bg-transparent border-2 border-[#A5D8FF] rounded-none text-white">
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+          <div className="flex flex-col space-y-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -395,17 +600,36 @@ export default function AdminUsersClient() {
                 />
               </div>
             </div>
-            <Select value={statusFilter} onValueChange={handleStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48 rounded-none">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent className="rounded-none">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="suspended">Suspended</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+              <Select value={statusFilter} onValueChange={handleStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48 rounded-none">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={categoryFilter}
+                onValueChange={handleCategoryFilter}
+              >
+                <SelectTrigger className="w-full sm:w-48 rounded-none">
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="none">No Preferences</SelectItem>
+                  {availableCategories.map((category) => (
+                    <SelectItem key={category._id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -456,6 +680,8 @@ export default function AdminUsersClient() {
                       setUserToDelete({ ...user, email });
                       setDeleteDialogOpen(true);
                     }}
+                    onUpdatePreferences={updatePreferences}
+                    availableCategories={availableCategories}
                   />
                 ))}
               </div>
