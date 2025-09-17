@@ -33,7 +33,12 @@ export const ApprovalEmail = ({
 
   return (
     <Html>
-      <Head />
+      <Head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
       <Tailwind
         config={{
           presets: [pixelBasedPreset],
@@ -41,7 +46,10 @@ export const ApprovalEmail = ({
       >
         <Body className="mx-auto my-auto bg-white px-2 font-sans">
           <Preview>{previewText}</Preview>
-          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+          <Container
+            className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]"
+            style={{ fontFamily: 'VT323, monospace' }}
+          >
             <Section className="mt-[32px]">
               <Img
                 src="https://i.postimg.cc/RVgNFgRS/yogeshwari.png"

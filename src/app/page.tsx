@@ -40,7 +40,7 @@ export default function Home() {
               className="h-28 w-28 object-contain"
             />
             <h1 className="text-2xl font-semibold tracking-tight text-[#A5D8FF] whitespace-nowrap">
-              Welcome to Patrons at Yogeshwari
+              Patrons at Yogeshwari
             </h1>
             <div className="relative mt-4 w-full">
               <div className="absolute inset-0 flex items-center">
